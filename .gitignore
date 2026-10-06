@@ -3,11 +3,6 @@ node_modules
 dist
 pictures
 
-# Claude Code files
-CLAUDE.md
-CLAUDE.local.md
-.claude
-
-# Docs and all Markdown files stay local
-docs
-*.md
+# Docs stay local until the team decides, except the test plans
+docs/*
+!docs/test-plans/
