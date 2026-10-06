@@ -1,0 +1,2 @@
+# Keep LF line endings on every machine, so Prettier gives the same result on Windows and Linux
+* text=auto eol=lf
