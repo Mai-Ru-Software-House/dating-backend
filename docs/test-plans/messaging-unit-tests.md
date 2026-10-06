@@ -142,6 +142,5 @@ Every route needs a valid token. Every error body has only the `error` key, with
 
 ## Not covered here
 
-- Chat photos (the `photos` part is rejected until the photo module from Tae exists).
 - The real repositories from the Data Access Layer (Chuan). The same tests can run against them once they exist.
 - The real token check (Auth Service, Chuan). The route tests use a fake.
