@@ -11,7 +11,6 @@ export interface StoredMessage {
   text: string;
   sentAt: Date;
   readAt: Date | null;
-  deletedAt: Date | null;
   replyToMessageId: string | null;
 }
 
@@ -45,19 +44,17 @@ export interface UserSummary {
 export interface ReplyPreview {
   messageId: string;
   senderId: string;
-  text: string | null;
+  text: string;
 }
 
-/** A message as sent to the app (`Message` in the contract). */
+/** A message as sent to the app (`Message` in the contract). `sentAt` is UTC ISO 8601. */
 export interface Message {
   messageId: string;
   senderId: string;
   receiverId: string;
-  text: string | null;
+  text: string;
   sentAt: string;
   isRead: boolean;
-  photoIds: string[];
-  isDeleted: boolean;
   replyTo: ReplyPreview | null;
 }
 
@@ -65,9 +62,8 @@ export interface Message {
 export interface LastMessage {
   messageId: string;
   senderId: string;
-  text: string | null;
+  text: string;
   sentAt: string;
-  isDeleted: boolean;
 }
 
 /** One row of the chat list. */
@@ -82,7 +78,7 @@ export interface ConversationRow {
 export interface UnreadMessage {
   messageId: string;
   sender: UserSummary;
-  text: string | null;
+  text: string;
   sentAt: string;
 }
 

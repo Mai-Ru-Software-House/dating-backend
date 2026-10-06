@@ -1,8 +1,9 @@
 /*
- * Messaging Service: send, reply, chat list, conversation, unread list, mark as read and
- * delete. It checks every rule from docs/api-contract.md (Messaging section) and reads and
- * writes data only through the interfaces in messageRepository.ts. Chat photos are not
- * supported yet; they need the photo module (Tae).
+ * Messaging Service: send, reply, chat list, conversation, unread list and mark as read. It
+ * follows the team functional test plan and docs/api-contract.md (Messaging section), and reads
+ * and writes data only through the interfaces in messageRepository.ts. Messages are text only.
+ * Opening a conversation and the mark as read call both mark every message from the other user
+ * as read.
  */
 import { ApiError, ERROR_CODES } from "../../plugins/errors";
 import type {
@@ -22,7 +23,6 @@ import {
 } from "./messagingTypes";
 
 const HTTP_BAD_REQUEST = 400;
-const HTTP_FORBIDDEN = 403;
 const HTTP_NOT_FOUND = 404;
 
 /** Longest message text, counted in Unicode code points after trimming (docs/decisions.md). */
@@ -38,9 +38,9 @@ const LOOKAHEAD = 1;
 
 /** What the app sent to Send Message. */
 export interface SendMessageInput {
-  text?: string;
-  /** True when the request had a `photos` part. Not supported until the photo module exists. */
-  hasPhotos: boolean;
+  text: string;
+  /** The message this one answers. It must be a message between the two users. */
+  replyToMessageId?: string;
 }
 
 /** Paging for one conversation. */
@@ -73,9 +73,7 @@ export interface MessagingService {
   markConversationRead(
     userId: string,
     otherUserId: string,
-    lastReadMessageId: string,
   ): Promise<{ userId: string; unreadCount: number }>;
-  deleteMessage(userId: string, messageId: string): Promise<void>;
 }
 
 /** Parts the Messaging Service needs. `notifier` and `now` are replaceable in tests. */
@@ -97,12 +95,12 @@ function messageNotFound(): ApiError {
 
 /**
  * Trim the text and check its length.
- * @param text - the text the app sent, or undefined
+ * @param text - the text the app sent
  * @returns the trimmed text
- * @throws ApiError 400 INVALID_INPUT (field `text`) when it is missing, empty or too long
+ * @throws ApiError 400 INVALID_INPUT (field `text`) when it is empty or too long
  */
-export function validateMessageText(text: string | undefined): string {
-  const trimmed = (text ?? "").trim();
+export function validateMessageText(text: string): string {
+  const trimmed = text.trim();
   if (trimmed === "") {
     throw invalidInput("text", "The message text cannot be empty.");
   }
@@ -147,30 +145,23 @@ function assertNotSelf(userId: string, otherUserId: string, action: string): voi
 }
 
 /**
- * Build the public message. A deleted message keeps its row but hides its text and photos.
+ * Build the public message.
  * @param message - the stored message
  * @param original - the message it replies to, if it is a reply and that message exists
- * @returns the message as the app receives it
+ * @returns the message as the app receives it, with `sentAt` as a UTC ISO 8601 string
  */
 export function toPublicMessage(message: StoredMessage, original?: StoredMessage): Message {
-  const isDeleted = message.deletedAt !== null;
   return {
     messageId: message.messageId,
     senderId: message.senderId,
     receiverId: message.receiverId,
-    text: isDeleted ? null : message.text,
+    text: message.text,
     sentAt: message.sentAt.toISOString(),
     isRead: message.readAt !== null,
-    photoIds: [],
-    isDeleted,
     replyTo:
       original === undefined
         ? null
-        : {
-            messageId: original.messageId,
-            senderId: original.senderId,
-            text: original.deletedAt === null ? original.text : null,
-          },
+        : { messageId: original.messageId, senderId: original.senderId, text: original.text },
   };
 }
 
@@ -198,6 +189,21 @@ export function createMessagingService(options: MessagingServiceOptions): Messag
       throw messageNotFound();
     }
     return message;
+  }
+
+  async function findReplyTarget(
+    senderId: string,
+    receiverId: string,
+    replyToMessageId: string,
+  ): Promise<StoredMessage> {
+    const original = await findOwnMessage(senderId, replyToMessageId);
+    if (!isBetween(original, senderId, receiverId)) {
+      throw invalidInput(
+        "replyToMessageId",
+        "replyToMessageId must be a message in this conversation.",
+      );
+    }
+    return original;
   }
 
   async function findCursor(
@@ -248,13 +254,14 @@ export function createMessagingService(options: MessagingServiceOptions): Messag
 
   return {
     async sendMessage(senderId, receiverId, input) {
-      if (input.hasPhotos) {
-        throw invalidInput("photos", "Photos in messages are not available yet.");
-      }
       const text = validateMessageText(input.text);
       assertNotSelf(senderId, receiverId, "send a message to");
       await findUser(receiverId);
-      return storeAndNotify(senderId, receiverId, text, undefined);
+      const original =
+        input.replyToMessageId === undefined
+          ? undefined
+          : await findReplyTarget(senderId, receiverId, input.replyToMessageId);
+      return storeAndNotify(senderId, receiverId, text, original);
     },
 
     async replyToMessage(userId, messageId, rawText) {
@@ -276,7 +283,6 @@ export function createMessagingService(options: MessagingServiceOptions): Messag
           return [];
         }
         const last = summary.lastMessage;
-        const isDeleted = last.deletedAt !== null;
         return [
           {
             user,
@@ -284,9 +290,8 @@ export function createMessagingService(options: MessagingServiceOptions): Messag
             lastMessage: {
               messageId: last.messageId,
               senderId: last.senderId,
-              text: isDeleted ? null : last.text,
+              text: last.text,
               sentAt: last.sentAt.toISOString(),
-              isDeleted,
             },
             unreadCount: summary.unreadCount,
           },
@@ -307,6 +312,9 @@ export function createMessagingService(options: MessagingServiceOptions): Messag
       const before = await findCursor("before", query.before, inThisConversation);
       const after = await findCursor("after", query.after, inThisConversation);
 
+      // Opening a conversation reads it. This runs only after every check passed, and before
+      // the page is read, so the answer already shows the messages as read.
+      await messages.markConversationRead(userId, otherUserId, now());
       const page = await messages.listConversationMessages(userId, otherUserId, {
         before,
         after,
@@ -348,29 +356,11 @@ export function createMessagingService(options: MessagingServiceOptions): Messag
       return { messages: unread, hasMore };
     },
 
-    async markConversationRead(userId, otherUserId, lastReadMessageId) {
+    async markConversationRead(userId, otherUserId) {
       assertNotSelf(userId, otherUserId, "mark a conversation with");
       await findUser(otherUserId);
-      const upTo = await findCursor("lastReadMessageId", lastReadMessageId, (message) =>
-        isBetween(message, userId, otherUserId),
-      );
-      if (upTo === undefined) {
-        throw invalidInput("lastReadMessageId", "lastReadMessageId is required.");
-      }
-      const unreadCount = await messages.markReadUpTo(userId, otherUserId, upTo, now());
+      const unreadCount = await messages.markConversationRead(userId, otherUserId, now());
       return { userId: otherUserId, unreadCount };
-    },
-
-    async deleteMessage(userId, messageId) {
-      const message = await findOwnMessage(userId, messageId);
-      if (message.senderId !== userId) {
-        throw new ApiError(
-          HTTP_FORBIDDEN,
-          ERROR_CODES.notMessageSender,
-          "Only the sender can delete a message.",
-        );
-      }
-      await messages.markDeleted(messageId, now());
     },
   };
 }
