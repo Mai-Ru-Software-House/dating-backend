@@ -17,7 +17,7 @@ describe("createLocationService", () => {
     const { fetch } = createMockFetch(() => jsonResponse(PATHUM_WAN_ANSWER));
     const service = createLocationService({ baseUrl: BASE_URL, fetch });
 
-    expect(await service.findPlaceName(13.7466, 100.5347)).toBe("Bangkok, Pathum Wan");
+    expect(await service.findPlaceName(13.7466, 100.5347)).toBe("Pathum Wan, Bangkok");
   });
 
   it("answers the second call for the same area from the cache", async () => {
@@ -27,7 +27,7 @@ describe("createLocationService", () => {
     await service.findPlaceName(13.7466, 100.5347);
     const second = await service.findPlaceName(13.74661, 100.53469);
 
-    expect(second).toBe("Bangkok, Pathum Wan");
+    expect(second).toBe("Pathum Wan, Bangkok");
     expect(calls).toHaveLength(1);
   });
 
@@ -51,7 +51,7 @@ describe("createLocationService", () => {
       service.findPlaceName(13.74662, 100.53468),
     ]);
 
-    expect(results).toEqual(["Bangkok, Pathum Wan", "Bangkok, Pathum Wan", "Bangkok, Pathum Wan"]);
+    expect(results).toEqual(["Pathum Wan, Bangkok", "Pathum Wan, Bangkok", "Pathum Wan, Bangkok"]);
     expect(calls).toHaveLength(1);
   });
 
@@ -81,7 +81,7 @@ describe("createLocationService", () => {
     await expect(service.findPlaceName(13.7466, 100.5347)).rejects.toBeInstanceOf(ApiError);
     shouldFail = false;
 
-    expect(await service.findPlaceName(13.7466, 100.5347)).toBe("Bangkok, Pathum Wan");
+    expect(await service.findPlaceName(13.7466, 100.5347)).toBe("Pathum Wan, Bangkok");
     expect(calls).toHaveLength(2);
   });
 

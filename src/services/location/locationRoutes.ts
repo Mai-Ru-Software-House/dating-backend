@@ -1,5 +1,5 @@
 /*
- * Location routes: GET /api/v1/places gives the place name ("province, district") for a point.
+ * Location routes: GET /api/v1/places gives the place name ("district, province") for a point.
  * It needs no session, because Create Profile uses it before the account exists.
  */
 import { Elysia, t } from "elysia";

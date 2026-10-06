@@ -30,7 +30,7 @@ export interface LocationService {
    * Find the place name for a point.
    * @param lat - latitude in degrees, -90 to 90
    * @param lon - longitude in degrees, -180 to 180
-   * @returns "province, district", or null when there is no place or no name for the point
+   * @returns "district, province", or null when there is no place or no name for the point
    * @throws ApiError 500 GEOCODER_UNAVAILABLE when Nominatim fails, times out, or the queue is
    *   full
    */
