@@ -1,7 +1,8 @@
 /*
- * Messaging routes: chat list, conversation, send, reply, delete, unread list and mark as read
- * (docs/api-contract.md, Messaging section). Every route needs a logged in user. Handlers only
- * check types with `t` and call the Messaging Service, which checks the rules.
+ * Messaging routes: chat list, conversation, send, reply, unread list and mark as read
+ * (docs/api-contract.md, Messaging section). Every route needs a logged in user. Bodies are JSON
+ * only (`parse: "json"`), because Elysia would otherwise also accept a multipart body. Handlers
+ * only check types with `t` and call the Messaging Service, which checks the rules.
  */
 import { Elysia, t } from "elysia";
 
@@ -11,9 +12,9 @@ import type { SessionValidator } from "../auth/sessionValidator";
 import type { MessagingService } from "./messagingService";
 
 const HTTP_CREATED = 201;
-const HTTP_NO_CONTENT = 204;
 const HTTP_BAD_REQUEST = 400;
 const UNREAD_FILTER_VALUE = "true";
+const JSON_ONLY = "json";
 const TAGS = ["Messaging"];
 
 const userSummarySchema = t.Object({
@@ -26,14 +27,10 @@ const messageSchema = t.Object({
   messageId: t.String(),
   senderId: t.String(),
   receiverId: t.String(),
-  text: t.Nullable(t.String()),
-  sentAt: t.String({ description: "UTC ISO 8601, set by the server" }),
+  text: t.String(),
+  sentAt: t.String({ description: "UTC ISO 8601 ending in Z, set by the server" }),
   isRead: t.Boolean(),
-  photoIds: t.Array(t.String()),
-  isDeleted: t.Boolean(),
-  replyTo: t.Nullable(
-    t.Object({ messageId: t.String(), senderId: t.String(), text: t.Nullable(t.String()) }),
-  ),
+  replyTo: t.Nullable(t.Object({ messageId: t.String(), senderId: t.String(), text: t.String() })),
 });
 
 const chatListSchema = t.Object({
@@ -44,9 +41,8 @@ const chatListSchema = t.Object({
       lastMessage: t.Object({
         messageId: t.String(),
         senderId: t.String(),
-        text: t.Nullable(t.String()),
+        text: t.String(),
         sentAt: t.String(),
-        isDeleted: t.Boolean(),
       }),
       unreadCount: t.Integer(),
     }),
@@ -58,7 +54,7 @@ const unreadListSchema = t.Object({
     t.Object({
       messageId: t.String(),
       sender: userSummarySchema,
-      text: t.Nullable(t.String()),
+      text: t.String(),
       sentAt: t.String(),
     }),
   ),
@@ -95,7 +91,10 @@ export function messagingRoutes(service: MessagingService, validateSession: Sess
           limit: limitQuery,
         }),
         response: { 200: t.Object({ messages: t.Array(messageSchema), hasMore: t.Boolean() }) },
-        detail: { summary: "Messages with one user, newest first", tags: TAGS },
+        detail: {
+          summary: "Messages with one user, newest first. Marks them as read.",
+          tags: TAGS,
+        },
       },
     )
     .post(
@@ -103,18 +102,21 @@ export function messagingRoutes(service: MessagingService, validateSession: Sess
       async ({ session, params, body, status }) => {
         const message = await service.sendMessage(session.userId, params.userId, {
           text: body.text,
-          hasPhotos: body.photos !== undefined && body.photos.length > 0,
+          replyToMessageId: body.replyToMessageId,
         });
         return status(HTTP_CREATED, message);
       },
       {
         params: userIdParams,
+        parse: JSON_ONLY,
         body: t.Object({
-          text: t.Optional(t.String({ description: "1 to 1000 characters after trimming" })),
-          photos: t.Optional(t.Files({ description: "Not available yet, answers 400" })),
+          text: t.String({ description: "1 to 1000 characters after trimming" }),
+          replyToMessageId: t.Optional(
+            t.String({ description: "The message this one answers, from the same conversation" }),
+          ),
         }),
         response: { [HTTP_CREATED]: messageSchema },
-        detail: { summary: "Send a message (multipart)", tags: TAGS },
+        detail: { summary: "Send a text message (JSON)", tags: TAGS },
       },
     )
     .post(
@@ -125,20 +127,13 @@ export function messagingRoutes(service: MessagingService, validateSession: Sess
       },
       {
         params: messageIdParams,
+        parse: JSON_ONLY,
         body: t.Object({ text: t.String({ description: "1 to 1000 characters after trimming" }) }),
         response: { [HTTP_CREATED]: messageSchema },
-        detail: { summary: "Reply to a message", tags: TAGS },
-      },
-    )
-    .delete(
-      "/messages/:messageId",
-      async ({ session, params, status }) => {
-        await service.deleteMessage(session.userId, params.messageId);
-        return status(HTTP_NO_CONTENT);
-      },
-      {
-        params: messageIdParams,
-        detail: { summary: "Delete my own message", tags: TAGS },
+        detail: {
+          summary: "Reply to a message (the receiver comes from that message)",
+          tags: TAGS,
+        },
       },
     )
     .get(
@@ -169,13 +164,13 @@ export function messagingRoutes(service: MessagingService, validateSession: Sess
     )
     .patch(
       "/conversations/:userId",
-      ({ session, params, body }) =>
-        service.markConversationRead(session.userId, params.userId, body.lastReadMessageId),
+      ({ session, params }) => service.markConversationRead(session.userId, params.userId),
       {
         params: userIdParams,
-        body: t.Object({ lastReadMessageId: t.String() }),
+        parse: JSON_ONLY,
+        body: t.Object({ isRead: t.Literal(true) }),
         response: { 200: t.Object({ userId: t.String(), unreadCount: t.Integer() }) },
-        detail: { summary: "Mark messages as read up to one message", tags: TAGS },
+        detail: { summary: "Mark every message from this user as read", tags: TAGS },
       },
     );
 }

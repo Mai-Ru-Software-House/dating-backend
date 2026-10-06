@@ -37,7 +37,7 @@ function isBetween(message: StoredMessage, userA: string, userB: string): boolea
 }
 
 function isUnreadFor(message: StoredMessage, receiverId: string): boolean {
-  return message.receiverId === receiverId && message.readAt === null && message.deletedAt === null;
+  return message.receiverId === receiverId && message.readAt === null;
 }
 
 function selectConversationPage(
@@ -77,7 +77,7 @@ export function createInMemoryMessageRepository(): MessageRepository {
     async insertMessage(message: NewMessage) {
       lastNumber += 1;
       const messageId = `${MESSAGE_ID_PREFIX}${String(lastNumber).padStart(MESSAGE_ID_DIGITS, "0")}`;
-      const stored: StoredMessage = { ...message, messageId, readAt: null, deletedAt: null };
+      const stored: StoredMessage = { ...message, messageId, readAt: null };
       messages.push(stored);
       return copyMessage(stored);
     },
@@ -131,22 +131,14 @@ export function createInMemoryMessageRepository(): MessageRepository {
       return summaries;
     },
 
-    async markReadUpTo(readerId, otherUserId, upTo, readAt) {
+    async markConversationRead(readerId, otherUserId, readAt) {
       for (const message of messages) {
         const isFromOther = message.senderId === otherUserId && message.receiverId === readerId;
-        const isUpTo = compareMessageKeys(message, upTo) <= 0;
-        if (isFromOther && isUpTo && message.readAt === null) {
+        if (isFromOther && message.readAt === null) {
           message.readAt = readAt;
         }
       }
       return countUnreadFrom(otherUserId, readerId);
-    },
-
-    async markDeleted(messageId, deletedAt) {
-      const found = messages.find((message) => message.messageId === messageId);
-      if (found !== undefined && found.deletedAt === null) {
-        found.deletedAt = deletedAt;
-      }
     },
   };
 }

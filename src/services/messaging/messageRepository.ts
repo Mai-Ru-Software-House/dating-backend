@@ -26,9 +26,9 @@ export interface UnreadPage {
 /** One chat partner of a user, as the repository groups it. */
 export interface ConversationSummary {
   otherUserId: string;
-  /** The newest message in either direction, deleted or not. */
+  /** The newest message in either direction. */
   lastMessage: StoredMessage;
-  /** Messages from the other user to me that are not read and not deleted. */
+  /** Messages from the other user to me that are not read. */
   unreadCount: number;
 }
 
@@ -37,7 +37,7 @@ export interface MessageRepository {
   /**
    * Store a new message.
    * @param message - the message data; the repository creates the ID
-   * @returns the stored message, not read and not deleted
+   * @returns the stored message, not read
    */
   insertMessage(message: NewMessage): Promise<StoredMessage>;
 
@@ -56,7 +56,7 @@ export interface MessageRepository {
   findMessagesByIds(messageIds: string[]): Promise<StoredMessage[]>;
 
   /**
-   * List the messages between two users, deleted ones included.
+   * List the messages between two users. Only messages sent between these two users appear.
    * @param userA - one user of the conversation
    * @param userB - the other user
    * @param page - cursor and limit
@@ -70,7 +70,7 @@ export interface MessageRepository {
   ): Promise<StoredMessage[]>;
 
   /**
-   * List messages sent to a user that are not read and not deleted.
+   * List messages sent to a user that are not read.
    * @param receiverId - the user the messages were sent to
    * @param page - cursor and limit
    * @returns up to `limit` messages, newest first
@@ -85,26 +85,14 @@ export interface MessageRepository {
   listConversationSummaries(userId: string): Promise<ConversationSummary[]>;
 
   /**
-   * Mark as read every unread message from `otherUserId` to `readerId` at or before `upTo`.
+   * Mark as read every unread message from `otherUserId` to `readerId`. Messages the reader
+   * sent, and messages of other conversations, are not touched.
    * @param readerId - the user who read the messages
    * @param otherUserId - the sender of the messages
-   * @param upTo - position of the last message read
    * @param readAt - the time to store
    * @returns how many messages from `otherUserId` to `readerId` are still unread
    */
-  markReadUpTo(
-    readerId: string,
-    otherUserId: string,
-    upTo: MessageKey,
-    readAt: Date,
-  ): Promise<number>;
-
-  /**
-   * Mark a message as deleted. A message that is already deleted keeps its first time.
-   * @param messageId - the message ID
-   * @param deletedAt - the time to store
-   */
-  markDeleted(messageId: string, deletedAt: Date): Promise<void>;
+  markConversationRead(readerId: string, otherUserId: string, readAt: Date): Promise<number>;
 }
 
 /** Reads favorites, for the chat list order. Proposed, Chuan to confirm. */

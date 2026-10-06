@@ -12,7 +12,6 @@ const HTTP_INTERNAL_ERROR = 500;
 export const ERROR_CODES = {
   invalidInput: "INVALID_INPUT",
   unauthenticated: "UNAUTHENTICATED",
-  notMessageSender: "NOT_MESSAGE_SENDER",
   notFound: "NOT_FOUND",
   userNotFound: "USER_NOT_FOUND",
   messageNotFound: "MESSAGE_NOT_FOUND",
