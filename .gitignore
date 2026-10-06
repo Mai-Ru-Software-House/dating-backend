@@ -1,5 +1,13 @@
-CLAUDE.local.md
 .env
 node_modules
 dist
 pictures
+
+# Claude Code files
+CLAUDE.md
+CLAUDE.local.md
+.claude
+
+# Docs and all Markdown files stay local
+docs
+*.md
