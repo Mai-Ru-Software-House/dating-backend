@@ -1,6 +1,6 @@
 /*
- * Place name builder: turns the address fields from Nominatim into "district, province"
- * (for example "Min Buri, Bangkok"). This is the only builder, so the Location Service and
+ * Place name builder: turns the address fields from Nominatim into "province, district"
+ * (for example "Bangkok, Min Buri"). This is the only builder, so the Location Service and
  * the Profile Service never produce different names for the same point. Built for Thai
  * addresses first.
  */
@@ -39,9 +39,9 @@ function pickName(address: NominatimAddress, fields: readonly string[]): string 
 }
 
 /**
- * Build the place name shown to users: "district, province", in the language of the address.
+ * Build the place name shown to users: "province, district", in the language of the address.
  * @param address - the `address` object from a Nominatim reverse geocoding answer
- * @returns "district, province"; only the province when no district is known; null if neither
+ * @returns "province, district"; only the province when no district is known; null if neither
  */
 export function buildPlaceName(address: NominatimAddress): string | null {
   const province = pickName(address, PROVINCE_FIELDS);
@@ -54,5 +54,5 @@ export function buildPlaceName(address: NominatimAddress): string | null {
   if (district === null || district.toLowerCase() === province.toLowerCase()) {
     return province;
   }
-  return `${district}, ${province}`;
+  return `${province}, ${district}`;
 }

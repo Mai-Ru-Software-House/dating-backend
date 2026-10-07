@@ -47,7 +47,7 @@ describe("GET /api/v1/places", () => {
     const { status, body } = await getPlaces(app, "?lat=13.7466&lon=100.5347");
 
     expect(status).toBe(200);
-    expect(body).toEqual({ placeName: "Pathum Wan, Bangkok" });
+    expect(body).toEqual({ placeName: "Bangkok, Pathum Wan" });
   });
 
   it("returns 400 INVALID_INPUT with the field for bad lat or lon", async () => {

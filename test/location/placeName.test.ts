@@ -1,26 +1,26 @@
 /*
- * Tests for buildPlaceName: "district, province" from Nominatim address fields.
+ * Tests for buildPlaceName: "province, district" from Nominatim address fields.
  */
 import { describe, expect, it } from "bun:test";
 
 import { buildPlaceName } from "../../src/services/location/placeName";
 
 describe("buildPlaceName", () => {
-  it("builds district then province", () => {
+  it("builds province then district", () => {
     expect(buildPlaceName({ state: "Bangkok", city_district: "Lat Krabang" })).toBe(
-      "Lat Krabang, Bangkok",
+      "Bangkok, Lat Krabang",
     );
   });
 
   it("uses the county as district in other provinces", () => {
     expect(buildPlaceName({ state: "Chiang Mai", county: "Mueang Chiang Mai" })).toBe(
-      "Mueang Chiang Mai, Chiang Mai",
+      "Chiang Mai, Mueang Chiang Mai",
     );
   });
 
   it("reads Bangkok from city when there is no state", () => {
     expect(buildPlaceName({ city: "Bangkok", city_district: "Pathum Wan" })).toBe(
-      "Pathum Wan, Bangkok",
+      "Bangkok, Pathum Wan",
     );
   });
 
@@ -35,13 +35,13 @@ describe("buildPlaceName", () => {
 
   it("removes English administrative prefixes and suffixes", () => {
     expect(buildPlaceName({ state: "Changwat Nonthaburi", county: "Amphoe Bang Bua Thong" })).toBe(
-      "Bang Bua Thong, Nonthaburi",
+      "Nonthaburi, Bang Bua Thong",
     );
     expect(buildPlaceName({ state: "Chang Wat Rayong", city_district: "Khet Bang Khen" })).toBe(
-      "Bang Khen, Rayong",
+      "Rayong, Bang Khen",
     );
     expect(buildPlaceName({ state: "Krabi Province", county: "Mueang Krabi District" })).toBe(
-      "Mueang Krabi, Krabi",
+      "Krabi, Mueang Krabi",
     );
   });
 
