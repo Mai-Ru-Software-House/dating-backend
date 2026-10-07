@@ -1,0 +1,156 @@
+// Database schema for the Mai Ru dating app: genders, users (profile and target preferences),
+// sign-in methods, refresh tokens, target genders, messages, favorites and notes.
+// Needs PostgreSQL 18 or newer for uuidv7(). The database URL is set in prisma.config.ts.
+// Database names stay snake_case (@map / @@map); Prisma names are camelCase and PascalCase.
+// onUpdate: NoAction keeps Postgres's default ON UPDATE rule (Prisma's own default is Cascade).
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  runtime  = "bun"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// One gender option, used for a user's own gender and for target genders.
+/// The four rows (male, female, non_binary, other) are added by the initial migration.
+model Gender {
+  code  String @id @db.VarChar(20)
+  label String @db.VarChar(50)
+
+  users      User[]
+  targetedBy UserTargetGender[]
+
+  @@map("genders")
+}
+
+/// One person: username, profile and target preferences.
+model User {
+  id             String   @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  /// Saved in lowercase by the backend, so the unique rule also catches "Alice" vs "alice".
+  username       String   @unique @db.VarChar(30)
+  displayName    String   @map("display_name") @db.VarChar(50)
+  dateOfBirth    DateTime @map("date_of_birth") @db.Date
+  genderCode     String   @map("gender_code") @db.VarChar(20)
+  /// RustFS object key of the profile photo.
+  photoKey       String   @map("photo_key") @db.VarChar(255)
+  latitude       Float
+  longitude      Float
+  /// "District, province" in English, e.g. "Min Buri, Bangkok". Empty when the lookup failed.
+  placeName      String?  @map("place_name") @db.VarChar(100)
+  targetMinAge   Int      @map("target_min_age") @db.SmallInt
+  targetMaxAge   Int      @map("target_max_age") @db.SmallInt
+  targetRadiusKm Int      @map("target_radius_km")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  gender           Gender             @relation(fields: [genderCode], references: [code], onDelete: Restrict, onUpdate: NoAction)
+  targetGenders    UserTargetGender[]
+  authMethods      UserAuthMethod[]
+  refreshTokens    RefreshToken[]
+  sentMessages     Message[]          @relation("MessageSender")
+  receivedMessages Message[]          @relation("MessageReceiver")
+  favorites        Favorite[]         @relation("FavoriteOwner")
+  favoritedBy      Favorite[]         @relation("FavoriteTarget")
+  notesWritten     Note[]             @relation("NoteAuthor")
+  notesAbout       Note[]             @relation("NoteSubject")
+
+  @@map("users")
+}
+
+/// One way a user can sign in. Only "password" for now (passwordHash set); "google"
+/// (providerUserId set) may come later with no table change.
+model UserAuthMethod {
+  userId         String  @map("user_id") @db.Uuid
+  authType       String  @map("auth_type") @db.VarChar(20)
+  /// Argon2id hash from Bun.password. Never sent to the app.
+  passwordHash   String? @map("password_hash") @db.VarChar(255)
+  providerUserId String? @map("provider_user_id") @db.VarChar(255)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([userId, authType])
+  @@unique([authType, providerUserId])
+  @@map("user_auth_methods")
+}
+
+/// One refresh token given out at sign-up, login or refresh. Only its hash is stored.
+model RefreshToken {
+  id        String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  /// SHA-256 of the token as 64 lowercase hex characters. Never sent to the app.
+  tokenHash String    @unique @map("token_hash") @db.Char(64)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  expiresAt DateTime  @map("expires_at") @db.Timestamptz(6)
+  /// Empty means the token has not been revoked.
+  revokedAt DateTime? @map("revoked_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+/// "This user wants to see this gender". "Anyone" is one row for every gender.
+model UserTargetGender {
+  userId     String @map("user_id") @db.Uuid
+  genderCode String @map("gender_code") @db.VarChar(20)
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  gender Gender @relation(fields: [genderCode], references: [code], onDelete: Restrict, onUpdate: NoAction)
+
+  @@id([userId, genderCode])
+  @@map("user_target_genders")
+}
+
+/// One text message from one user to another, optionally a reply to an earlier message.
+model Message {
+  id               String    @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  senderId         String    @map("sender_id") @db.Uuid
+  receiverId       String    @map("receiver_id") @db.Uuid
+  body             String    @db.VarChar(1000)
+  replyToMessageId String?   @map("reply_to_message_id") @db.Uuid
+  sentAt           DateTime  @default(now()) @map("sent_at") @db.Timestamptz(6)
+  /// Empty means the receiver has not read the message yet.
+  readAt           DateTime? @map("read_at") @db.Timestamptz(6)
+
+  sender   User      @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  receiver User      @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  replyTo  Message?  @relation("MessageReply", fields: [replyToMessageId], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  replies  Message[] @relation("MessageReply")
+
+  @@index([receiverId, readAt])
+  @@index([senderId, receiverId, sentAt])
+  @@map("messages")
+}
+
+/// "This user pinned that user". Favorites are shown first in the chat list.
+model Favorite {
+  userId         String   @map("user_id") @db.Uuid
+  favoriteUserId String   @map("favorite_user_id") @db.Uuid
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user         User @relation("FavoriteOwner", fields: [userId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  favoriteUser User @relation("FavoriteTarget", fields: [favoriteUserId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([userId, favoriteUserId])
+  @@map("favorites")
+}
+
+/// One private note a user wrote about another user. Many notes per pair are allowed.
+model Note {
+  id            Int      @id @default(autoincrement())
+  authorId      String   @map("author_id") @db.Uuid
+  subjectUserId String   @map("subject_user_id") @db.Uuid
+  body          String   @db.VarChar(2000)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  author      User @relation("NoteAuthor", fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  subjectUser User @relation("NoteSubject", fields: [subjectUserId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([authorId, subjectUserId, createdAt])
+  @@map("notes")
+}
