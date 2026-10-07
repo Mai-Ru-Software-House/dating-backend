@@ -9,20 +9,29 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "db:generate": "bunx --bun --no-install prisma generate",
+    "db:status": "bunx --bun --no-install prisma migrate status",
+    "db:deploy": "bunx --bun --no-install prisma migrate deploy",
+    "db:seed": "bunx --bun --no-install prisma db seed"
   },
   "dependencies": {
     "@elysia/cors": "^1.4.2",
     "@elysia/openapi": "^1.4.16",
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
     "@sinclair/typebox": "^0.34.52",
-    "elysia": "^1.4.30"
+    "elysia": "^1.4.30",
+    "pg": "8.23.1"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/bun": "^1.4.2",
+    "@types/pg": "8.23.1",
     "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.9",
+    "prisma": "7.10.0",
     "typescript": "~5.9.0",
     "typescript-eslint": "^8.71.0"
   }
