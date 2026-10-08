@@ -11,6 +11,7 @@ import { openapiPlugin } from "./plugins/openapi";
 import { healthRoutes } from "./routes/health";
 import { createPrismaAuthRepository } from "./data/prismaAuthRepository";
 import { createPrismaClient } from "./data/prismaClient";
+import { createPrismaMatchProfileReader } from "./data/prismaMatchProfileReader";
 import type { PrismaClient } from "./generated/prisma/client";
 import { authRoutes } from "./services/auth/authRoutes";
 import { createAuthService, type AuthService } from "./services/auth/authService";
@@ -32,6 +33,9 @@ import {
   createInMemoryMessageRepository,
   createInMemoryUserReader,
 } from "./services/messaging/inMemoryMessageRepository";
+import { createMatchEngineClient } from "./services/match/engineClient";
+import { matchRoutes } from "./services/match/matchRoutes";
+import { createMatchService, type MatchService } from "./services/match/matchService";
 import { messagingRoutes } from "./services/messaging/messagingRoutes";
 import {
   createMessagingService,
@@ -47,6 +51,7 @@ export interface AppDependencies {
   sessionValidator?: SessionValidator;
   messagingService?: MessagingService;
   favoritesNotesService?: FavoritesNotesService;
+  matchService?: MatchService;
 }
 
 /**
@@ -88,6 +93,16 @@ export function createApp(config: Config, dependencies: AppDependencies = {}) {
     dependencies.favoritesNotesService ??
     createFavoritesNotesService({ favorites, notes: createInMemoryNotesRepository(), users });
 
+  const matchService =
+    dependencies.matchService ??
+    createMatchService({
+      profiles: createPrismaMatchProfileReader(getPrisma()),
+      engine: createMatchEngineClient({
+        baseUrl: config.matchEngineUrl,
+        timeoutMs: config.matchEngineTimeoutMs,
+      }),
+    });
+
   return new Elysia()
     .use(errorHandler)
     .use(corsPlugin(config))
@@ -96,5 +111,6 @@ export function createApp(config: Config, dependencies: AppDependencies = {}) {
     .use(authRoutes(authService))
     .use(locationRoutes(locationService))
     .use(messagingRoutes(messagingService, sessionValidator))
-    .use(favoritesNotesRoutes(favoritesNotesService, sessionValidator));
+    .use(favoritesNotesRoutes(favoritesNotesService, sessionValidator))
+    .use(matchRoutes(matchService, sessionValidator));
 }
