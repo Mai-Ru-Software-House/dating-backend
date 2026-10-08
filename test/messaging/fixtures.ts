@@ -18,7 +18,7 @@ import { createMessagingService } from "../../src/services/messaging/messagingSe
 
 function makeUser(displayName: string): UserSummary {
   const key = displayName.toLowerCase();
-  return { userId: `usr_${key}`, displayName, photoId: `pho_${key}` };
+  return { userId: `usr_${key}`, displayName, photoUrl: `/api/v1/photos/pho_${key}` };
 }
 
 export const ALICE = makeUser("Alice");

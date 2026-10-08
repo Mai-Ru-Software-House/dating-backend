@@ -27,7 +27,7 @@ describe("getRecommendations", () => {
       userId: BOB.userId,
       username: "bob",
       displayName: "Bob",
-      photoId: "pho_bob",
+      photoUrl: "/api/v1/photos/pho_bob",
       age: 28,
       gender: "male",
       placeName: "Bangkok, Bang Rak",

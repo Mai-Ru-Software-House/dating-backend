@@ -15,7 +15,9 @@ const cardSchema = t.Object({
   userId: t.String(),
   username: t.String(),
   displayName: t.String(),
-  photoId: t.String(),
+  photoUrl: t.String({
+    description: "Path of the profile photo, for example /api/v1/photos/pho_b2",
+  }),
   age: t.Integer(),
   gender: t.String(),
   placeName: t.Nullable(t.String()),

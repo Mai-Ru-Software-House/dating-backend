@@ -20,7 +20,9 @@ const NOTES_TAGS = ["Notes"];
 const userSummarySchema = t.Object({
   userId: t.String(),
   displayName: t.String(),
-  photoId: t.String(),
+  photoUrl: t.String({
+    description: "Path of the profile photo, for example /api/v1/photos/pho_b2",
+  }),
 });
 
 const noteSchema = t.Object({

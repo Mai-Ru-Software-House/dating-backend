@@ -74,7 +74,7 @@ describe("favorites routes", () => {
     expect(body.favorites[0].user).toEqual({
       userId: CHAI_ID,
       displayName: "Chai",
-      photoId: "pho_chai",
+      photoUrl: "/api/v1/photos/pho_chai",
     });
   });
 

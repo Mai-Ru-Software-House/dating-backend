@@ -33,7 +33,8 @@ export interface CandidateCard {
   userId: string;
   username: string;
   displayName: string;
-  photoId: string;
+  /** Path of the profile photo, for example `/api/v1/photos/pho_b2`. */
+  photoUrl: string;
   age: number;
   gender: string;
   placeName: string | null;

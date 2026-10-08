@@ -6,6 +6,7 @@
  */
 import { ApiError, ERROR_CODES } from "../../plugins/errors";
 import { distanceKm, roundDistanceKm } from "../location/distance";
+import { photoUrlFor } from "../photo/photoUrl";
 import type { EngineProfile, MatchEngineClient } from "./engineClient";
 import type { CandidateCard, MatchProfile, MatchProfileReader } from "./matchTypes";
 import {
@@ -119,7 +120,7 @@ function toCard(entry: PoolEntry, kmFromPoint: number, matchScore?: number): Can
     userId: profile.userId,
     username: profile.username,
     displayName: profile.displayName,
-    photoId: profile.photoId,
+    photoUrl: photoUrlFor(profile.photoId),
     age,
     gender: profile.gender,
     placeName: profile.placeName,

@@ -57,7 +57,7 @@ describe("GET /api/v1/recommendations", () => {
       "distanceKm",
       "gender",
       "matchScore",
-      "photoId",
+      "photoUrl",
       "placeName",
       "userId",
       "username",
