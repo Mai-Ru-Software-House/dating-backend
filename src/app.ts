@@ -20,6 +20,7 @@ import {
   createPrismaMessageRepository,
   createPrismaUserReader,
 } from "./data/prismaMessageRepository";
+import { createPrismaProfileRepository } from "./data/prismaProfileRepository";
 import type { PrismaClient } from "./generated/prisma/client";
 import { authRoutes } from "./services/auth/authRoutes";
 import { createAuthService, type AuthService } from "./services/auth/authService";
@@ -41,6 +42,11 @@ import {
   createMessagingService,
   type MessagingService,
 } from "./services/messaging/messagingService";
+import { createInMemoryPhotoUploadClaimer } from "./services/profile/inMemoryPhotoUploadClaimer";
+import { createEngineMatchScorer } from "./services/profile/matchScorer";
+import type { PhotoUploadClaimer } from "./services/profile/photoUploadClaimer";
+import { profileRoutes } from "./services/profile/profileRoutes";
+import { createProfileService, type ProfileService } from "./services/profile/profileService";
 
 /** Parts of the app that tests can replace, for example to avoid real network calls. */
 export interface AppDependencies {
@@ -52,6 +58,9 @@ export interface AppDependencies {
   messagingService?: MessagingService;
   favoritesNotesService?: FavoritesNotesService;
   matchService?: MatchService;
+  profileService?: ProfileService;
+  /** Sign up's photo upload claim (Tae). Until the RustFS version exists, no upload is known. */
+  photoUploads?: PhotoUploadClaimer;
 }
 
 /**
@@ -66,14 +75,16 @@ export function createApp(config: Config, dependencies: AppDependencies = {}) {
     createLocationService({ baseUrl: config.nominatimUrl, email: config.nominatimEmail });
   let prismaClient = dependencies.prisma;
   const getPrisma = () => (prismaClient ??= createPrismaClient(config.databaseUrl));
+  // Login and sign up hash passwords with the same Argon2id settings.
+  const hasher = createPasswordHasher({
+    memoryCost: config.argon2MemoryCost,
+    timeCost: config.argon2TimeCost,
+  });
   const authService =
     dependencies.authService ??
     createAuthService({
       repository: createPrismaAuthRepository(getPrisma()),
-      hasher: createPasswordHasher({
-        memoryCost: config.argon2MemoryCost,
-        timeCost: config.argon2TimeCost,
-      }),
+      hasher,
       tokens: createTokenService({
         secret: config.jwtSecret,
         accessTtlSeconds: config.accessTokenTtlSeconds,
@@ -101,14 +112,27 @@ export function createApp(config: Config, dependencies: AppDependencies = {}) {
       users,
     });
 
+  // One engine client for Find Matches and the match score on a candidate profile.
+  const engine = createMatchEngineClient({
+    baseUrl: config.matchEngineUrl,
+    timeoutMs: config.matchEngineTimeoutMs,
+  });
   const matchService =
     dependencies.matchService ??
-    createMatchService({
-      profiles: createPrismaMatchProfileReader(getPrisma()),
-      engine: createMatchEngineClient({
-        baseUrl: config.matchEngineUrl,
-        timeoutMs: config.matchEngineTimeoutMs,
-      }),
+    createMatchService({ profiles: createPrismaMatchProfileReader(getPrisma()), engine });
+
+  // Profile Service (Chuan). It shares the favorites repository, so `isFavorite` on a profile
+  // agrees with GET /favorites.
+  const profileService =
+    dependencies.profileService ??
+    createProfileService({
+      profiles: createPrismaProfileRepository(getPrisma()),
+      hasher,
+      auth: authService,
+      places: locationService,
+      photoUploads: dependencies.photoUploads ?? createInMemoryPhotoUploadClaimer(),
+      favorites,
+      scorer: createEngineMatchScorer({ engine }),
     });
 
   return new Elysia()
@@ -117,6 +141,7 @@ export function createApp(config: Config, dependencies: AppDependencies = {}) {
     .use(openapiPlugin())
     .use(healthRoutes)
     .use(authRoutes(authService))
+    .use(profileRoutes(profileService, sessionValidator))
     .use(locationRoutes(locationService))
     .use(messagingRoutes(messagingService, sessionValidator))
     .use(favoritesNotesRoutes(favoritesNotesService, sessionValidator))

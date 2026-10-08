@@ -4,6 +4,7 @@
  * alice's favorite and alice's note. Message times are relative to when the script runs.
  * Set SEED_LONG_THREAD=true to also add the 60 message thread between alice and dan (test CH06).
  * It creates no refresh tokens (logging in does) and no mint_01 (test CP01 creates that user).
+ * Photo keys and place names are fixed text: the seed never calls Nominatim or RustFS.
  * Run with `bun run db:seed`. It refuses to run when NODE_ENV is production, and refuses to add
  * the test users a second time. Everything is written in one transaction: all or nothing.
  */
@@ -18,14 +19,18 @@ const READ_DELAY_MINUTES = 5;
 /** Interactive transactions stop after 5 s by default; the remote dev database needs longer. */
 const TRANSACTION_TIMEOUT_MS = 30_000;
 const PASSWORD_AUTH_TYPE = "password";
-/** Placeholder photo keys. These objects do not exist in RustFS. */
-const PHOTO_KEY_PREFIX = "profile-photos/seed/";
+/**
+ * Profile photo keys are `profile-photos/<photoId>.<extension>`. Tae uploads the seed photos to
+ * RustFS under these keys; until then the objects do not exist.
+ */
+const PHOTO_KEY_PREFIX = "profile-photos/";
+const PHOTO_EXTENSION = ".jpg";
 const LONG_THREAD_PARTICIPANTS = ["alice", "dan"] as const;
 const LONG_THREAD_LENGTH = 60;
 /** The long thread starts 2 days ago, so it is older than every message from M1 to M6. */
 const LONG_THREAD_START_MINUTES_AGO = 2_880;
 
-type GenderCode = "male" | "female" | "non_binary" | "other";
+type GenderCode = "female" | "male" | "non_binary" | "prefer_not_to_say";
 
 /** One row of the "Test Users" sheet. */
 interface SeedUser {
@@ -37,8 +42,13 @@ interface SeedUser {
   dateOfBirth: string;
   latitude: number;
   longitude: number;
-  /** The sheet's "Area" column. */
+  /**
+   * "province, district" as the Location Service builds it for this point (looked up once on
+   * 9 Oct 2026). It replaces the sheet's "Area" column, so the seed matches what sign up stores.
+   */
   placeName: string;
+  /** Fixed UUID (version 7), the file name of the profile photo in RustFS. */
+  photoId: string;
   targetGender: GenderCode;
   targetMinAge: number;
   targetMaxAge: number;
@@ -65,7 +75,8 @@ const TEST_USERS: SeedUser[] = [
     dateOfBirth: "1999-03-10",
     latitude: 13.7466,
     longitude: 100.5393,
-    placeName: "Siam, Bangkok",
+    placeName: "Bangkok, Pathum Wan",
+    photoId: "01a11cd3-d7b1-73d1-aabc-f70e9970b5ed",
     targetGender: "male",
     targetMinAge: 24,
     targetMaxAge: 32,
@@ -79,7 +90,8 @@ const TEST_USERS: SeedUser[] = [
     dateOfBirth: "1998-05-20",
     latitude: 13.7279,
     longitude: 100.5241,
-    placeName: "Silom, Bangkok",
+    placeName: "Bangkok, Bang Rak",
+    photoId: "01a11cd3-d941-75b3-81d3-5596fb700b67",
     targetGender: "female",
     targetMinAge: 22,
     targetMaxAge: 30,
@@ -93,7 +105,8 @@ const TEST_USERS: SeedUser[] = [
     dateOfBirth: "2001-02-14",
     latitude: 13.8621,
     longitude: 100.5144,
-    placeName: "Nonthaburi",
+    placeName: "Nonthaburi, Mueang Nonthaburi",
+    photoId: "01a11cd3-dd68-72a3-ba73-7f7e680e1985",
     targetGender: "female",
     targetMinAge: 22,
     targetMaxAge: 30,
@@ -107,7 +120,8 @@ const TEST_USERS: SeedUser[] = [
     dateOfBirth: "1985-01-05",
     latitude: 13.7563,
     longitude: 100.5018,
-    placeName: "Bangkok",
+    placeName: "Bangkok, Phra Nakhon",
+    photoId: "01a11cd3-e140-74c9-9c6c-55774387e1a8",
     targetGender: "female",
     targetMinAge: 25,
     targetMaxAge: 45,
@@ -121,7 +135,8 @@ const TEST_USERS: SeedUser[] = [
     dateOfBirth: "1997-04-01",
     latitude: 18.7883,
     longitude: 98.9853,
-    placeName: "Chiang Mai",
+    placeName: "Chiang Mai, Mueang Chiang Mai",
+    photoId: "01a11cd3-e6de-720c-b7f6-7ec7156bfe70",
     targetGender: "female",
     targetMinAge: 22,
     targetMaxAge: 35,
@@ -135,7 +150,8 @@ const TEST_USERS: SeedUser[] = [
     dateOfBirth: "2000-07-07",
     latitude: 13.765,
     longitude: 100.538,
-    placeName: "Bangkok",
+    placeName: "Bangkok, Ratchathewi",
+    photoId: "01a11cd3-e9a7-704b-8e21-bbc7325c170a",
     targetGender: "male",
     targetMinAge: 24,
     targetMaxAge: 35,
@@ -149,7 +165,8 @@ const TEST_USERS: SeedUser[] = [
     dateOfBirth: "1996-04-22",
     latitude: 13.5991,
     longitude: 100.5998,
-    placeName: "Samut Prakan",
+    placeName: "Samut Prakan, Mueang Samut Prakan",
+    photoId: "01a11cd3-ef25-7371-bcef-478de3fd378f",
     targetGender: "female",
     targetMinAge: 20,
     targetMaxAge: 26,
@@ -163,7 +180,8 @@ const TEST_USERS: SeedUser[] = [
     dateOfBirth: "1995-08-30",
     latitude: 13.74,
     longitude: 100.56,
-    placeName: "Bangkok",
+    placeName: "Bangkok, Vadhana",
+    photoId: "01a11cd3-f201-7590-ba17-a5b497cb864d",
     targetGender: "male",
     targetMinAge: 25,
     targetMaxAge: 40,
@@ -177,7 +195,8 @@ const TEST_USERS: SeedUser[] = [
     dateOfBirth: "1950-06-01",
     latitude: 14.3532,
     longitude: 100.5689,
-    placeName: "Ayutthaya",
+    placeName: "Phra Nakhon Si Ayutthaya",
+    photoId: "01a11cd3-f49a-7049-8402-8b743d23f7fc",
     targetGender: "female",
     targetMinAge: 70,
     targetMaxAge: 80,
@@ -299,7 +318,7 @@ async function insertUsers(
         displayName: user.displayName,
         dateOfBirth: new Date(user.dateOfBirth),
         genderCode: user.gender,
-        photoKey: `${PHOTO_KEY_PREFIX}${user.username}.jpg`,
+        photoKey: `${PHOTO_KEY_PREFIX}${user.photoId}${PHOTO_EXTENSION}`,
         latitude: user.latitude,
         longitude: user.longitude,
         placeName: user.placeName,
