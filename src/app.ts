@@ -19,8 +19,16 @@ import type { SessionValidator } from "./services/auth/sessionValidator";
 import { createTokenService } from "./services/auth/tokens";
 import { locationRoutes } from "./services/location/locationRoutes";
 import { createLocationService, type LocationService } from "./services/location/locationService";
+import { favoritesNotesRoutes } from "./services/favoritesNotes/favoritesNotesRoutes";
 import {
-  createInMemoryFavoritesReader,
+  createFavoritesNotesService,
+  type FavoritesNotesService,
+} from "./services/favoritesNotes/favoritesNotesService";
+import {
+  createInMemoryFavoritesRepository,
+  createInMemoryNotesRepository,
+} from "./services/favoritesNotes/inMemoryFavoritesNotesRepository";
+import {
   createInMemoryMessageRepository,
   createInMemoryUserReader,
 } from "./services/messaging/inMemoryMessageRepository";
@@ -38,6 +46,7 @@ export interface AppDependencies {
   locationService?: LocationService;
   sessionValidator?: SessionValidator;
   messagingService?: MessagingService;
+  favoritesNotesService?: FavoritesNotesService;
 }
 
 /**
@@ -67,14 +76,17 @@ export function createApp(config: Config, dependencies: AppDependencies = {}) {
       refreshTtlDays: config.refreshTokenTtlDays,
     });
   const sessionValidator = dependencies.sessionValidator ?? authService.validateSession;
-  // In-memory data until the Data Access Layer (Chuan) provides the real repositories.
+  // In-memory data until the Data Access Layer (Chuan) provides the real repositories. The
+  // favorites repository and the user reader are shared, so the chat list shows the favorites
+  // that the Favorites & Notes Service saved.
+  const users = createInMemoryUserReader();
+  const favorites = createInMemoryFavoritesRepository();
   const messagingService =
     dependencies.messagingService ??
-    createMessagingService({
-      messages: createInMemoryMessageRepository(),
-      favorites: createInMemoryFavoritesReader(),
-      users: createInMemoryUserReader(),
-    });
+    createMessagingService({ messages: createInMemoryMessageRepository(), favorites, users });
+  const favoritesNotesService =
+    dependencies.favoritesNotesService ??
+    createFavoritesNotesService({ favorites, notes: createInMemoryNotesRepository(), users });
 
   return new Elysia()
     .use(errorHandler)
@@ -83,5 +95,6 @@ export function createApp(config: Config, dependencies: AppDependencies = {}) {
     .use(healthRoutes)
     .use(authRoutes(authService))
     .use(locationRoutes(locationService))
-    .use(messagingRoutes(messagingService, sessionValidator));
+    .use(messagingRoutes(messagingService, sessionValidator))
+    .use(favoritesNotesRoutes(favoritesNotesService, sessionValidator));
 }
