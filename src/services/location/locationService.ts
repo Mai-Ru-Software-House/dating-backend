@@ -30,7 +30,7 @@ export interface LocationService {
    * Find the place name for a point.
    * @param lat - latitude in degrees, -90 to 90
    * @param lon - longitude in degrees, -180 to 180
-   * @returns "district, province", or null when there is no place or no name for the point
+   * @returns "province, district", or null when there is no place or no name for the point
    * @throws ApiError 500 GEOCODER_UNAVAILABLE when Nominatim fails, times out, or the queue is
    *   full
    */
@@ -40,6 +40,8 @@ export interface LocationService {
 /** Settings for createLocationService. Everything except `baseUrl` is replaceable in tests. */
 export interface LocationServiceOptions {
   baseUrl: string;
+  /** Contact email sent to Nominatim (NOMINATIM_EMAIL). Optional. */
+  email?: string;
   fetch?: typeof fetch;
   client?: NominatimClient;
   limiter?: RateLimiter;
@@ -53,7 +55,8 @@ export interface LocationServiceOptions {
  */
 export function createLocationService(options: LocationServiceOptions): LocationService {
   const client =
-    options.client ?? createNominatimClient({ baseUrl: options.baseUrl, fetch: options.fetch });
+    options.client ??
+    createNominatimClient({ baseUrl: options.baseUrl, email: options.email, fetch: options.fetch });
   const limiter =
     options.limiter ??
     createRateLimiter({ minIntervalMs: MIN_REQUEST_INTERVAL_MS, maxWaitMs: MAX_QUEUE_WAIT_MS });

@@ -39,8 +39,8 @@ describe("buildCacheKey", () => {
 describe("createPlaceCache", () => {
   it("returns a stored name", () => {
     const { cache } = createCache();
-    cache.set("a", "Pathum Wan, Bangkok");
-    expect(cache.get("a")).toBe("Pathum Wan, Bangkok");
+    cache.set("a", "Bangkok, Pathum Wan");
+    expect(cache.get("a")).toBe("Bangkok, Pathum Wan");
   });
 
   it("returns undefined for a missing key", () => {

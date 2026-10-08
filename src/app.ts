@@ -9,14 +9,33 @@ import { corsPlugin } from "./plugins/cors";
 import { errorHandler } from "./plugins/errors";
 import { openapiPlugin } from "./plugins/openapi";
 import { healthRoutes } from "./routes/health";
-import { stubSessionValidator, type SessionValidator } from "./services/auth/sessionValidator";
+import { createPrismaAuthRepository } from "./data/prismaAuthRepository";
+import { createPrismaClient } from "./data/prismaClient";
+import {
+  createPrismaFavoritesRepository,
+  createPrismaNotesRepository,
+} from "./data/prismaFavoritesNotesRepository";
+import { createPrismaMatchProfileReader } from "./data/prismaMatchProfileReader";
+import {
+  createPrismaMessageRepository,
+  createPrismaUserReader,
+} from "./data/prismaMessageRepository";
+import type { PrismaClient } from "./generated/prisma/client";
+import { authRoutes } from "./services/auth/authRoutes";
+import { createAuthService, type AuthService } from "./services/auth/authService";
+import { createPasswordHasher } from "./services/auth/passwordHasher";
+import type { SessionValidator } from "./services/auth/sessionValidator";
+import { createTokenService } from "./services/auth/tokens";
 import { locationRoutes } from "./services/location/locationRoutes";
 import { createLocationService, type LocationService } from "./services/location/locationService";
+import { favoritesNotesRoutes } from "./services/favoritesNotes/favoritesNotesRoutes";
 import {
-  createInMemoryFavoritesReader,
-  createInMemoryMessageRepository,
-  createInMemoryUserReader,
-} from "./services/messaging/inMemoryMessageRepository";
+  createFavoritesNotesService,
+  type FavoritesNotesService,
+} from "./services/favoritesNotes/favoritesNotesService";
+import { createMatchEngineClient } from "./services/match/engineClient";
+import { matchRoutes } from "./services/match/matchRoutes";
+import { createMatchService, type MatchService } from "./services/match/matchService";
 import { messagingRoutes } from "./services/messaging/messagingRoutes";
 import {
   createMessagingService,
@@ -25,9 +44,14 @@ import {
 
 /** Parts of the app that tests can replace, for example to avoid real network calls. */
 export interface AppDependencies {
+  /** Shared database client. Created from DATABASE_URL on first use when not given. */
+  prisma?: PrismaClient;
+  authService?: AuthService;
   locationService?: LocationService;
   sessionValidator?: SessionValidator;
   messagingService?: MessagingService;
+  favoritesNotesService?: FavoritesNotesService;
+  matchService?: MatchService;
 }
 
 /**
@@ -38,16 +62,53 @@ export interface AppDependencies {
  */
 export function createApp(config: Config, dependencies: AppDependencies = {}) {
   const locationService =
-    dependencies.locationService ?? createLocationService({ baseUrl: config.nominatimUrl });
-  // Until the Auth Service exists, the stub accepts no token, so protected routes answer 401.
-  const sessionValidator = dependencies.sessionValidator ?? stubSessionValidator;
-  // In-memory data until the Data Access Layer (Chuan) provides the real repositories.
+    dependencies.locationService ??
+    createLocationService({ baseUrl: config.nominatimUrl, email: config.nominatimEmail });
+  let prismaClient = dependencies.prisma;
+  const getPrisma = () => (prismaClient ??= createPrismaClient(config.databaseUrl));
+  const authService =
+    dependencies.authService ??
+    createAuthService({
+      repository: createPrismaAuthRepository(getPrisma()),
+      hasher: createPasswordHasher({
+        memoryCost: config.argon2MemoryCost,
+        timeCost: config.argon2TimeCost,
+      }),
+      tokens: createTokenService({
+        secret: config.jwtSecret,
+        accessTtlSeconds: config.accessTokenTtlSeconds,
+      }),
+      refreshTtlDays: config.refreshTokenTtlDays,
+    });
+  const sessionValidator = dependencies.sessionValidator ?? authService.validateSession;
+  // PostgreSQL repositories (written by Vic as a proposal for Chuan, see docs/data-access.md). The
+  // favorites repository and the user reader are shared, so the chat list shows the favorites
+  // that the Favorites & Notes Service saved.
+  const users = createPrismaUserReader(getPrisma());
+  const favorites = createPrismaFavoritesRepository(getPrisma());
   const messagingService =
     dependencies.messagingService ??
     createMessagingService({
-      messages: createInMemoryMessageRepository(),
-      favorites: createInMemoryFavoritesReader(),
-      users: createInMemoryUserReader(),
+      messages: createPrismaMessageRepository(getPrisma()),
+      favorites,
+      users,
+    });
+  const favoritesNotesService =
+    dependencies.favoritesNotesService ??
+    createFavoritesNotesService({
+      favorites,
+      notes: createPrismaNotesRepository(getPrisma()),
+      users,
+    });
+
+  const matchService =
+    dependencies.matchService ??
+    createMatchService({
+      profiles: createPrismaMatchProfileReader(getPrisma()),
+      engine: createMatchEngineClient({
+        baseUrl: config.matchEngineUrl,
+        timeoutMs: config.matchEngineTimeoutMs,
+      }),
     });
 
   return new Elysia()
@@ -55,6 +116,9 @@ export function createApp(config: Config, dependencies: AppDependencies = {}) {
     .use(corsPlugin(config))
     .use(openapiPlugin())
     .use(healthRoutes)
+    .use(authRoutes(authService))
     .use(locationRoutes(locationService))
-    .use(messagingRoutes(messagingService, sessionValidator));
+    .use(messagingRoutes(messagingService, sessionValidator))
+    .use(favoritesNotesRoutes(favoritesNotesService, sessionValidator))
+    .use(matchRoutes(matchService, sessionValidator));
 }

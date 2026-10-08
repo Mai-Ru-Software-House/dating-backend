@@ -7,6 +7,9 @@
 export interface RecordedCall {
   url: URL;
   headers: Headers;
+  method: string;
+  /** The request body parsed as JSON, or undefined when there is none. */
+  body: unknown;
 }
 
 type Handler = (call: RecordedCall) => Response | Promise<Response>;
@@ -19,9 +22,25 @@ type Handler = (call: RecordedCall) => Response | Promise<Response>;
 export function createMockFetch(handler: Handler) {
   const calls: RecordedCall[] = [];
   const mockFetch = async (input: string | URL | Request, init?: RequestInit) => {
-    const call = { url: new URL(String(input)), headers: new Headers(init?.headers) };
+    const call = {
+      url: new URL(String(input)),
+      headers: new Headers(init?.headers),
+      method: init?.method ?? "GET",
+      body: typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined,
+    };
     calls.push(call);
-    return handler(call);
+    const answer = Promise.resolve(handler(call));
+    const signal = init?.signal;
+    if (signal === undefined || signal === null) {
+      return answer;
+    }
+    // Like the real fetch, give up when the request is aborted (for example by a timeout).
+    return Promise.race([
+      answer,
+      new Promise<never>((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+      }),
+    ]);
   };
   return { fetch: mockFetch as unknown as typeof fetch, calls };
 }

@@ -18,7 +18,7 @@ import { createMessagingService } from "../../src/services/messaging/messagingSe
 
 function makeUser(displayName: string): UserSummary {
   const key = displayName.toLowerCase();
-  return { userId: `usr_${key}`, displayName, photoId: `pho_${key}` };
+  return { userId: `usr_${key}`, displayName, photoUrl: `/api/v1/photos/pho_${key}` };
 }
 
 export const ALICE = makeUser("Alice");
@@ -223,7 +223,7 @@ export const testConfig = loadConfig({
   NODE_ENV: "test",
   PORT: "3000",
   CORS_ORIGINS: "http://localhost:8081",
-  SESSION_SECRET: "test-secret",
+  JWT_SECRET: "test-secret",
   DATABASE_URL: "postgres://user:pass@localhost:5432/test",
   RUSTFS_ENDPOINT: "http://localhost:9000",
   RUSTFS_ACCESS_KEY: "test",

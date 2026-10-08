@@ -13,6 +13,8 @@ export const NOMINATIM_LANGUAGE = "en";
 const NOMINATIM_USER_AGENT = "MaiRu-Backend/0.1 (SEN-201 student project)";
 /** Zoom 12 asks for town / district level, so no street or house data is returned. */
 const NOMINATIM_ZOOM = "12";
+/** Only addresses, never shops or other points of interest. */
+const NOMINATIM_LAYER = "address";
 const GEOCODER_MESSAGE = "The place lookup is not available right now. Please try again.";
 
 /** Looks up the address of a point. Resolves to null when Nominatim knows no place there. */
@@ -23,6 +25,8 @@ export interface NominatimClient {
 /** Settings for createNominatimClient. `fetch` can be replaced in tests. */
 export interface NominatimClientOptions {
   baseUrl: string;
+  /** Contact email for the OpenStreetMap operators, sent as `email`. Optional. */
+  email?: string;
   fetch?: typeof fetch;
 }
 
@@ -30,17 +34,22 @@ function geocoderUnavailable(): ApiError {
   return new ApiError(HTTP_INTERNAL_ERROR, ERROR_CODES.geocoderUnavailable, GEOCODER_MESSAGE);
 }
 
-function buildReverseUrl(baseUrl: string, lat: number, lon: number): URL {
+function buildReverseUrl(baseUrl: string, lat: number, lon: number, email?: string): URL {
   const url = new URL(baseUrl);
   url.pathname = `${url.pathname.replace(/\/+$/, "")}/reverse`;
-  url.search = new URLSearchParams({
+  const parameters = new URLSearchParams({
     format: "jsonv2",
     lat: String(lat),
     lon: String(lon),
     addressdetails: "1",
     zoom: NOMINATIM_ZOOM,
+    layer: NOMINATIM_LAYER,
     "accept-language": NOMINATIM_LANGUAGE,
-  }).toString();
+  });
+  if (email !== undefined) {
+    parameters.set("email", email);
+  }
+  url.search = parameters.toString();
   return url;
 }
 
@@ -68,7 +77,7 @@ function readAddress(body: unknown): NominatimAddress | null {
 
 /**
  * Create a Nominatim client.
- * @param options - the Nominatim base URL and an optional fetch function
+ * @param options - the Nominatim base URL, an optional contact email and an optional fetch function
  * @returns the client
  */
 export function createNominatimClient(options: NominatimClientOptions): NominatimClient {
@@ -85,7 +94,7 @@ export function createNominatimClient(options: NominatimClientOptions): Nominati
      */
     async reverseGeocode(lat, lon) {
       try {
-        const response = await fetchFn(buildReverseUrl(options.baseUrl, lat, lon), {
+        const response = await fetchFn(buildReverseUrl(options.baseUrl, lat, lon, options.email), {
           headers: { "User-Agent": NOMINATIM_USER_AGENT, "Accept-Language": NOMINATIM_LANGUAGE },
           signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         });

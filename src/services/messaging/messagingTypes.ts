@@ -37,7 +37,8 @@ export interface MessageKey {
 export interface UserSummary {
   userId: string;
   displayName: string;
-  photoId: string;
+  /** Path of the profile photo, built with `photoUrlFor`, for example `/api/v1/photos/pho_b2`. */
+  photoUrl: string;
 }
 
 /** The message a reply points to, as sent to the app. */

@@ -12,11 +12,13 @@ const HTTP_INTERNAL_ERROR = 500;
 export const ERROR_CODES = {
   invalidInput: "INVALID_INPUT",
   unauthenticated: "UNAUTHENTICATED",
+  invalidCredentials: "INVALID_CREDENTIALS",
   notFound: "NOT_FOUND",
   userNotFound: "USER_NOT_FOUND",
   messageNotFound: "MESSAGE_NOT_FOUND",
   placeNotFound: "PLACE_NOT_FOUND",
   geocoderUnavailable: "GEOCODER_UNAVAILABLE",
+  matchEngineUnavailable: "MATCH_ENGINE_UNAVAILABLE",
   internalError: "INTERNAL_ERROR",
 } as const;
 

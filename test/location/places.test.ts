@@ -13,7 +13,7 @@ const testConfig = loadConfig({
   NODE_ENV: "test",
   PORT: "3000",
   CORS_ORIGINS: "http://localhost:8081",
-  SESSION_SECRET: "test-secret",
+  JWT_SECRET: "test-secret",
   DATABASE_URL: "postgres://user:pass@localhost:5432/test",
   RUSTFS_ENDPOINT: "http://localhost:9000",
   RUSTFS_ACCESS_KEY: "test",
@@ -47,7 +47,7 @@ describe("GET /api/v1/places", () => {
     const { status, body } = await getPlaces(app, "?lat=13.7466&lon=100.5347");
 
     expect(status).toBe(200);
-    expect(body).toEqual({ placeName: "Pathum Wan, Bangkok" });
+    expect(body).toEqual({ placeName: "Bangkok, Pathum Wan" });
   });
 
   it("returns 400 INVALID_INPUT with the field for bad lat or lon", async () => {
