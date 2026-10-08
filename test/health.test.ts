@@ -11,7 +11,7 @@ const testConfig = loadConfig({
   NODE_ENV: "test",
   PORT: "3000",
   CORS_ORIGINS: "http://localhost:8081",
-  SESSION_SECRET: "test-secret",
+  JWT_SECRET: "test-secret",
   DATABASE_URL: "postgres://user:pass@localhost:5432/test",
   RUSTFS_ENDPOINT: "http://localhost:9000",
   RUSTFS_ACCESS_KEY: "test",
