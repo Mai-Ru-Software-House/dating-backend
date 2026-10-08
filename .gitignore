@@ -3,6 +3,5 @@ node_modules
 dist
 pictures
 
-# Docs stay local until the team decides, except the test plans
-docs/*
-!docs/test-plans/
+# Notes and docs that only live on one machine
+local-docs/

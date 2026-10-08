@@ -2,4 +2,5 @@ bun.lock
 node_modules
 dist
 docs
+local-docs
 src/generated
