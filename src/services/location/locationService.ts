@@ -40,6 +40,8 @@ export interface LocationService {
 /** Settings for createLocationService. Everything except `baseUrl` is replaceable in tests. */
 export interface LocationServiceOptions {
   baseUrl: string;
+  /** Contact email sent to Nominatim (NOMINATIM_EMAIL). Optional. */
+  email?: string;
   fetch?: typeof fetch;
   client?: NominatimClient;
   limiter?: RateLimiter;
@@ -53,7 +55,8 @@ export interface LocationServiceOptions {
  */
 export function createLocationService(options: LocationServiceOptions): LocationService {
   const client =
-    options.client ?? createNominatimClient({ baseUrl: options.baseUrl, fetch: options.fetch });
+    options.client ??
+    createNominatimClient({ baseUrl: options.baseUrl, email: options.email, fetch: options.fetch });
   const limiter =
     options.limiter ??
     createRateLimiter({ minIntervalMs: MIN_REQUEST_INTERVAL_MS, maxWaitMs: MAX_QUEUE_WAIT_MS });

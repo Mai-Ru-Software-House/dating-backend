@@ -33,6 +33,18 @@ describe("loadConfig", () => {
     expect(config.accessTokenTtlSeconds).toBe(60);
   });
 
+  it("has no Nominatim email unless NOMINATIM_EMAIL is set to something", () => {
+    expect(loadConfig(REQUIRED).nominatimEmail).toBeUndefined();
+    expect(loadConfig({ ...REQUIRED, NOMINATIM_EMAIL: "" }).nominatimEmail).toBeUndefined();
+    expect(loadConfig({ ...REQUIRED, NOMINATIM_EMAIL: "backend@example.org" }).nominatimEmail).toBe(
+      "backend@example.org",
+    );
+  });
+
+  it("rejects a NOMINATIM_EMAIL that is not an email address", () => {
+    expect(() => loadConfig({ ...REQUIRED, NOMINATIM_EMAIL: "not an email" })).toThrow(ConfigError);
+  });
+
   it("rejects a missing JWT_SECRET", () => {
     const withoutSecret: Record<string, string | undefined> = { ...REQUIRED };
     delete withoutSecret.JWT_SECRET;

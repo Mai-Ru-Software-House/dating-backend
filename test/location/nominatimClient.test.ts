@@ -44,6 +44,21 @@ describe("createNominatimClient", () => {
     expect(url.searchParams.get("format")).toBe("jsonv2");
     expect(url.searchParams.get("addressdetails")).toBe("1");
     expect(url.searchParams.get("accept-language")).toBe("en");
+    expect(url.searchParams.get("layer")).toBe("address");
+    expect(url.searchParams.has("email")).toBe(false);
+  });
+
+  it("sends the contact email when one is set", async () => {
+    const { fetch, calls } = createMockFetch(() => jsonResponse(BANGKOK_ANSWER));
+    const client = createNominatimClient({
+      baseUrl: BASE_URL,
+      email: "backend@example.org",
+      fetch,
+    });
+
+    await client.reverseGeocode(13.7244, 100.7296);
+
+    expect(calls[0]!.url.searchParams.get("email")).toBe("backend@example.org");
   });
 
   it("sends a User-Agent that is not empty", async () => {

@@ -14,6 +14,7 @@ const DEFAULT_ARGON2_MEMORY_COST = "65536";
 const DEFAULT_ARGON2_TIME_COST = "3";
 const DEFAULT_MATCH_ENGINE_TIMEOUT_MS = "5000";
 const POSITIVE_INTEGER_PATTERN = "^[1-9][0-9]*$";
+const EMAIL_PATTERN = String.raw`^[^@\s]+@[^@\s]+$`;
 const MAX_PORT = 65535;
 const URL_VARIABLES = [
   "DATABASE_URL",
@@ -39,6 +40,7 @@ const envSchema = t.Object({
   RUSTFS_BUCKET: t.String({ minLength: 1 }),
   MATCH_ENGINE_URL: t.String({ minLength: 1 }),
   NOMINATIM_URL: t.String({ minLength: 1 }),
+  NOMINATIM_EMAIL: t.Optional(t.String({ pattern: EMAIL_PATTERN })),
 });
 
 type RawEnv = Static<typeof envSchema>;
@@ -61,6 +63,8 @@ export interface Config {
   rustfsBucket: string;
   matchEngineUrl: string;
   nominatimUrl: string;
+  /** Contact email sent to Nominatim, or undefined when NOMINATIM_EMAIL is not set. */
+  nominatimEmail: string | undefined;
 }
 
 /** Thrown when the environment is missing variables or has invalid values. */
@@ -96,6 +100,8 @@ export function loadConfig(source: Record<string, string | undefined> = process.
     ARGON2_MEMORY_COST: source.ARGON2_MEMORY_COST ?? DEFAULT_ARGON2_MEMORY_COST,
     ARGON2_TIME_COST: source.ARGON2_TIME_COST ?? DEFAULT_ARGON2_TIME_COST,
     MATCH_ENGINE_TIMEOUT_MS: source.MATCH_ENGINE_TIMEOUT_MS ?? DEFAULT_MATCH_ENGINE_TIMEOUT_MS,
+    // An empty value (NOMINATIM_EMAIL=) means "not set".
+    NOMINATIM_EMAIL: source.NOMINATIM_EMAIL?.trim() || undefined,
   };
 
   const problems = [...Value.Errors(envSchema, candidate)].map((error) => {
@@ -139,5 +145,6 @@ export function loadConfig(source: Record<string, string | undefined> = process.
     rustfsBucket: raw.RUSTFS_BUCKET,
     matchEngineUrl: raw.MATCH_ENGINE_URL,
     nominatimUrl: raw.NOMINATIM_URL,
+    nominatimEmail: raw.NOMINATIM_EMAIL,
   };
 }

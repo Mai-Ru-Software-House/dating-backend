@@ -48,7 +48,8 @@ export interface AppDependencies {
  */
 export function createApp(config: Config, dependencies: AppDependencies = {}) {
   const locationService =
-    dependencies.locationService ?? createLocationService({ baseUrl: config.nominatimUrl });
+    dependencies.locationService ??
+    createLocationService({ baseUrl: config.nominatimUrl, email: config.nominatimEmail });
   let prismaClient = dependencies.prisma;
   const getPrisma = () => (prismaClient ??= createPrismaClient(config.databaseUrl));
   const authService =
