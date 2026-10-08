@@ -14,7 +14,8 @@ const HTTP_NO_CONTENT = 204;
 const JSON_ONLY = "json";
 const TAGS = ["Auth"];
 const MAX_USERNAME_LENGTH = 100;
-const MAX_PASSWORD_LENGTH = 1000;
+/** Longest password login reads. Sign up uses the same limit, so every new password can log in. */
+export const MAX_PASSWORD_LENGTH = 1000;
 const MAX_TOKEN_LENGTH = 500;
 
 const tokenPairSchema = t.Object({ accessToken: t.String(), refreshToken: t.String() });

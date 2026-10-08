@@ -10,10 +10,14 @@ import {
   createInMemoryMessageRepository,
   createInMemoryUserReader,
 } from "../../src/services/messaging/inMemoryMessageRepository";
+import { createInMemoryProfilePhotoRepository } from "../../src/services/photo/inMemoryProfilePhotoRepository";
+import { createInMemoryProfileRepository } from "../../src/services/profile/inMemoryProfileRepository";
 import {
   describeFavoritesRepository,
   describeMessageRepository,
   describeNotesRepository,
+  describeProfilePhotoRepository,
+  describeProfileRepository,
   describeUserReader,
   type People,
 } from "./contracts";
@@ -43,4 +47,12 @@ describeUserReader(async () => {
     Object.entries(expected).map(([userId, summary]) => ({ userId, ...summary })),
   );
   return { ...PEOPLE, reader, expected };
+});
+
+describeProfileRepository(async () => ({ repository: createInMemoryProfileRepository() }));
+
+describeProfilePhotoRepository(async () => {
+  const alice = { userId: PEOPLE.alice, photoKey: `profile-photos/${Bun.randomUUIDv7()}.jpg` };
+  const bob = { userId: PEOPLE.bob, photoKey: `profile-photos/${Bun.randomUUIDv7()}.webp` };
+  return { repository: createInMemoryProfilePhotoRepository([alice, bob]), alice, bob };
 });

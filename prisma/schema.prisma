@@ -15,7 +15,8 @@ datasource db {
 }
 
 /// One gender option, used for a user's own gender and for target genders.
-/// The four rows (male, female, non_binary, other) are added by the initial migration.
+/// The four rows (female, male, non_binary, prefer_not_to_say) come from the migrations: the
+/// first one added male, female, non_binary and other; the second replaced other.
 model Gender {
   code  String @id @db.VarChar(20)
   label String @db.VarChar(50)
@@ -34,11 +35,13 @@ model User {
   displayName    String   @map("display_name") @db.VarChar(50)
   dateOfBirth    DateTime @map("date_of_birth") @db.Date
   genderCode     String   @map("gender_code") @db.VarChar(20)
-  /// RustFS object key of the profile photo.
-  photoKey       String   @map("photo_key") @db.VarChar(255)
+  /// RustFS object key of the profile photo: `profile-photos/<photoId>.<extension>`, where photoId
+  /// is a UUID. Unique, so GET /photos/{photoId} finds exactly one user.
+  photoKey       String   @unique @map("photo_key") @db.VarChar(255)
   latitude       Float
   longitude      Float
-  /// "District, province" in English, e.g. "Min Buri, Bangkok". Empty when the lookup failed.
+  /// "province, district" in English, e.g. "Bangkok, Pathum Wan" (only the province when no
+  /// district is known). Empty when the lookup failed.
   placeName      String?  @map("place_name") @db.VarChar(100)
   targetMinAge   Int      @map("target_min_age") @db.SmallInt
   targetMaxAge   Int      @map("target_max_age") @db.SmallInt

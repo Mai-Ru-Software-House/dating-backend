@@ -17,6 +17,7 @@ export const ERROR_CODES = {
   userNotFound: "USER_NOT_FOUND",
   messageNotFound: "MESSAGE_NOT_FOUND",
   placeNotFound: "PLACE_NOT_FOUND",
+  usernameTaken: "USERNAME_TAKEN",
   geocoderUnavailable: "GEOCODER_UNAVAILABLE",
   matchEngineUnavailable: "MATCH_ENGINE_UNAVAILABLE",
   internalError: "INTERNAL_ERROR",

@@ -30,9 +30,19 @@ describe.skipIf(!hasTestDatabase)("database schema", () => {
     await prisma.$disconnect();
   });
 
-  it("has the four gender rows from the first migration", async () => {
+  it("has the app's four gender rows from the migrations", async () => {
     const genders = await prisma.gender.findMany({ orderBy: { code: "asc" } });
-    expect(genders.map((gender) => gender.code)).toEqual(["female", "male", "non_binary", "other"]);
+    expect(genders.map((gender) => [gender.code, gender.label])).toEqual([
+      ["female", "Female"],
+      ["male", "Male"],
+      ["non_binary", "Non-binary"],
+      ["prefer_not_to_say", "Prefer not to say"],
+    ]);
+  });
+
+  it("accepts prefer_not_to_say as a gender", async () => {
+    const user = await createTestUser(prisma, "alice", { genderCode: "prefer_not_to_say" });
+    expect(user.genderCode).toBe("prefer_not_to_say");
   });
 
   it("keeps the gender rows when the test reset runs", async () => {
@@ -54,6 +64,18 @@ describe.skipIf(!hasTestDatabase)("database schema", () => {
 
   it("rejects a gender that is not in the genders table", async () => {
     await failure(() => createTestUser(prisma, "alice", { genderCode: "robot" }));
+  });
+
+  it("no longer has the old gender other", async () => {
+    await failure(() => createTestUser(prisma, "alice", { genderCode: "other" }));
+  });
+
+  it("rejects a second user with the same photo key", async () => {
+    const alice = await createTestUser(prisma, "alice");
+    const bob = await createTestUser(prisma, "bob_01");
+    const takeAlicesPhoto = () =>
+      prisma.user.update({ where: { id: bob.id }, data: { photoKey: alice.photoKey } });
+    expect((await failure(takeAlicesPhoto)).code).toBe("P2002");
   });
 
   it("keeps one password sign-in method per user", async () => {

@@ -346,13 +346,13 @@ export type UserOrderByWithRelationInput = {
 export type UserWhereUniqueInput = Prisma.AtLeast<{
   id?: string
   username?: string
+  photoKey?: string
   AND?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
   OR?: Prisma.UserWhereInput[]
   NOT?: Prisma.UserWhereInput | Prisma.UserWhereInput[]
   displayName?: Prisma.StringFilter<"User"> | string
   dateOfBirth?: Prisma.DateTimeFilter<"User"> | Date | string
   genderCode?: Prisma.StringFilter<"User"> | string
-  photoKey?: Prisma.StringFilter<"User"> | string
   latitude?: Prisma.FloatFilter<"User"> | number
   longitude?: Prisma.FloatFilter<"User"> | number
   placeName?: Prisma.StringNullableFilter<"User"> | string | null
@@ -371,7 +371,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   favoritedBy?: Prisma.FavoriteListRelationFilter
   notesWritten?: Prisma.NoteListRelationFilter
   notesAbout?: Prisma.NoteListRelationFilter
-}, "id" | "username">
+}, "id" | "username" | "photoKey">
 
 export type UserOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -2294,13 +2294,15 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     dateOfBirth: Date
     genderCode: string
     /**
-     * RustFS object key of the profile photo.
+     * RustFS object key of the profile photo: `profile-photos/<photoId>.<extension>`, where photoId
+     * is a UUID. Unique, so GET /photos/{photoId} finds exactly one user.
      */
     photoKey: string
     latitude: number
     longitude: number
     /**
-     * "District, province" in English, e.g. "Min Buri, Bangkok". Empty when the lookup failed.
+     * "province, district" in English, e.g. "Bangkok, Pathum Wan" (only the province when no
+     * district is known). Empty when the lookup failed.
      */
     placeName: string | null
     targetMinAge: number

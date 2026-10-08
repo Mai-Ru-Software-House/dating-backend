@@ -1,7 +1,7 @@
 /*
  * The repository behaviour tests (test/repositories/contracts.ts), run against PostgreSQL with
- * the Prisma repositories: messages, favorites, notes and the user reader. They need
- * TEST_DATABASE_URL and run on Linux or WSL.
+ * the Prisma repositories: messages, favorites, notes, the user reader, profiles and profile
+ * photos. They need TEST_DATABASE_URL and run on Linux or WSL.
  */
 import { afterAll, describe } from "bun:test";
 
@@ -13,11 +13,15 @@ import {
   createPrismaMessageRepository,
   createPrismaUserReader,
 } from "../../src/data/prismaMessageRepository";
+import { createPrismaProfilePhotoRepository } from "../../src/data/prismaProfilePhotoRepository";
+import { createPrismaProfileRepository } from "../../src/data/prismaProfileRepository";
 import type { PrismaClient } from "../../src/generated/prisma/client";
 import {
   describeFavoritesRepository,
   describeMessageRepository,
   describeNotesRepository,
+  describeProfilePhotoRepository,
+  describeProfileRepository,
   describeUserReader,
   type People,
 } from "../repositories/contracts";
@@ -62,5 +66,20 @@ describe.skipIf(!hasTestDatabase)("Prisma repositories", () => {
       [people.chai]: { displayName: "chai_01", photoUrl: "/api/v1/photos/chai_01" },
     };
     return { ...people, reader: createPrismaUserReader(prisma), expected };
+  });
+
+  describeProfileRepository(async () => {
+    await resetDatabase(prisma);
+    return { repository: createPrismaProfileRepository(prisma) };
+  });
+
+  describeProfilePhotoRepository(async () => {
+    const people = await freshPeople();
+    const alice = { userId: people.alice, photoKey: `profile-photos/${Bun.randomUUIDv7()}.jpg` };
+    const bob = { userId: people.bob, photoKey: `profile-photos/${Bun.randomUUIDv7()}.webp` };
+    for (const user of [alice, bob]) {
+      await prisma.user.update({ where: { id: user.userId }, data: { photoKey: user.photoKey } });
+    }
+    return { repository: createPrismaProfilePhotoRepository(prisma), alice, bob };
   });
 });

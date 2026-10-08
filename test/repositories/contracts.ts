@@ -1,7 +1,8 @@
 /*
- * One set of behaviour tests for the repositories (messages, favorites, notes, users). They run
- * against the in-memory versions (always) and against the Prisma versions (when a test database
- * is set), so both must behave the same. The tests only use the repository interfaces.
+ * One set of behaviour tests for the repositories (messages, favorites, notes, users, profiles,
+ * profile photos). They run against the in-memory versions (always) and against the Prisma
+ * versions (when a test database is set), so both must behave the same. The tests only use the
+ * repository interfaces.
  */
 import { describe, expect, it } from "bun:test";
 
@@ -11,6 +12,8 @@ import type {
 } from "../../src/services/favoritesNotes/favoritesNotesRepository";
 import type { MessageRepository, UserReader } from "../../src/services/messaging/messageRepository";
 import type { NewMessage } from "../../src/services/messaging/messagingTypes";
+import type { ProfilePhotoRepository } from "../../src/services/photo/profilePhotoRepository";
+import type { NewProfile, ProfileRepository } from "../../src/services/profile/profileRepository";
 
 const T0 = new Date("2026-10-08T10:00:00.000Z").getTime();
 const MINUTE_MS = 60_000;
@@ -424,6 +427,297 @@ export function describeUserReader(setup: () => Promise<UsersWorld>): void {
       const found = await reader.findUserSummaries([NO_SUCH_UUID, NO_SUCH_USER, chai]);
       expect(found.map((summary) => summary.userId)).toEqual([chai]);
       expect(await reader.findUserSummaries([])).toEqual([]);
+    });
+  });
+}
+
+/** A fresh, empty world for one test of the profile repository. */
+export interface ProfileWorld {
+  repository: ProfileRepository;
+}
+
+/** One user and the photo key they have at the start of a test. */
+export interface UserWithPhoto {
+  userId: string;
+  photoKey: string;
+}
+
+/** A fresh world for one test of the profile photo repository. */
+export interface PhotoWorld {
+  repository: ProfilePhotoRepository;
+  /** Has a `.jpg` photo key. */
+  alice: UserWithPhoto;
+  /** Has a `.webp` photo key. */
+  bob: UserWithPhoto;
+}
+
+/** The fields of the CP01 user mint_01, with a new photo key each time. */
+function newProfile(username: string, changes: Partial<NewProfile> = {}): NewProfile {
+  return {
+    username,
+    displayName: "Mint",
+    dateOfBirth: new Date("1999-09-15T00:00:00.000Z"),
+    gender: "female",
+    latitude: 13.73,
+    longitude: 100.53,
+    placeName: "Bangkok, Pathum Wan",
+    photoKey: `profile-photos/${Bun.randomUUIDv7()}.jpg`,
+    passwordHash: "$argon2id$v=19$m=65536,t=3,p=1$not-a-real-hash",
+    preferences: { minAge: 24, maxAge: 32, targetGenders: ["male"], radiusKm: 30 },
+    ...changes,
+  };
+}
+
+/** Create a profile that must be stored, and return it. */
+async function createOrFail(repository: ProfileRepository, profile: NewProfile) {
+  const result = await repository.createProfile(profile);
+  if (result.status !== "created") {
+    throw new Error(`Expected the profile to be created, got ${result.status}`);
+  }
+  return result.profile;
+}
+
+/** The photo ID inside a key: the file name without its extension. */
+function photoIdOf(photoKey: string): string {
+  return photoKey.slice(photoKey.lastIndexOf("/") + 1, photoKey.lastIndexOf("."));
+}
+
+/**
+ * Behaviour tests for `ProfileRepository`.
+ * @param setup - builds a fresh, empty repository for each test
+ */
+export function describeProfileRepository(setup: () => Promise<ProfileWorld>): void {
+  describe("ProfileRepository", () => {
+    it("lists the app's four gender codes", async () => {
+      const { repository } = await setup();
+      expect(await repository.listGenderCodes()).toEqual([
+        "female",
+        "male",
+        "non_binary",
+        "prefer_not_to_say",
+      ]);
+    });
+
+    it("stores a new profile and finds it again", async () => {
+      const { repository } = await setup();
+      const photoId = Bun.randomUUIDv7();
+      const created = await createOrFail(
+        repository,
+        newProfile("mint_01", { photoKey: `profile-photos/${photoId}.jpg` }),
+      );
+      expect(created).toMatchObject({
+        username: "mint_01",
+        displayName: "Mint",
+        gender: "female",
+        latitude: 13.73,
+        longitude: 100.53,
+        placeName: "Bangkok, Pathum Wan",
+        photoId,
+        preferences: { minAge: 24, maxAge: 32, targetGenders: ["male"], radiusKm: 30 },
+      });
+      expect(created.dateOfBirth.toISOString()).toBe("1999-09-15T00:00:00.000Z");
+      expect(await repository.findProfileById(created.userId)).toEqual(created);
+    });
+
+    it("sorts the target genders and keeps an empty place name as null", async () => {
+      const { repository } = await setup();
+      const created = await createOrFail(
+        repository,
+        newProfile("mint_01", {
+          placeName: null,
+          preferences: {
+            minAge: 24,
+            maxAge: 32,
+            targetGenders: ["prefer_not_to_say", "male", "non_binary"],
+            radiusKm: 30,
+          },
+        }),
+      );
+      const found = await repository.findProfileById(created.userId);
+      expect(found?.placeName).toBeNull();
+      expect(found?.preferences.targetGenders).toEqual(["male", "non_binary", "prefer_not_to_say"]);
+    });
+
+    it("CP18: keeps odd text exactly as given", async () => {
+      const { repository } = await setup();
+      const injection = "' OR '1'='1";
+      const created = await createOrFail(
+        repository,
+        newProfile("mint_01", { displayName: injection }),
+      );
+      expect((await repository.findProfileById(created.userId))?.displayName).toBe(injection);
+    });
+
+    it("says a username is taken only once it is stored", async () => {
+      const { repository } = await setup();
+      expect(await repository.isUsernameTaken("mint_01")).toBe(false);
+      await createOrFail(repository, newProfile("mint_01"));
+      expect(await repository.isUsernameTaken("mint_01")).toBe(true);
+      expect(await repository.isUsernameTaken("mint_02")).toBe(false);
+    });
+
+    it("CP04: does not store a second user with a taken username", async () => {
+      const { repository } = await setup();
+      const first = await createOrFail(repository, newProfile("alice"));
+      const second = await repository.createProfile(newProfile("alice", { displayName: "Other" }));
+      expect(second).toEqual({ status: "usernameTaken" });
+      expect((await repository.findProfileById(first.userId))?.displayName).toBe("Mint");
+    });
+
+    it("CP09: of two sign ups with one username at the same time, exactly one is stored", async () => {
+      const { repository } = await setup();
+      const results = await Promise.all([
+        repository.createProfile(newProfile("race_01")),
+        repository.createProfile(newProfile("race_01")),
+      ]);
+      expect(results.map((result) => result.status).sort()).toEqual(["created", "usernameTaken"]);
+    });
+
+    it("stores nothing when the photo key is taken", async () => {
+      const { repository } = await setup();
+      const photoKey = `profile-photos/${Bun.randomUUIDv7()}.png`;
+      await createOrFail(repository, newProfile("mint_01", { photoKey }));
+      expect(await repository.createProfile(newProfile("mint_02", { photoKey }))).toEqual({
+        status: "photoKeyTaken",
+      });
+      expect(await repository.isUsernameTaken("mint_02")).toBe(false);
+    });
+
+    it("does not find an unknown user, or an ID that is not a UUID", async () => {
+      const { repository } = await setup();
+      expect(await repository.findProfileById(NO_SUCH_UUID)).toBeNull();
+      expect(await repository.findProfileById(NO_SUCH_USER)).toBeNull();
+    });
+
+    it("changes only the fields that are given", async () => {
+      const { repository } = await setup();
+      const created = await createOrFail(repository, newProfile("mint_01"));
+      const updated = await repository.updateProfile(created.userId, {
+        displayName: "Minty",
+        gender: "prefer_not_to_say",
+      });
+      expect(updated).toEqual({ ...created, displayName: "Minty", gender: "prefer_not_to_say" });
+      expect(await repository.findProfileById(created.userId)).toEqual(updated);
+    });
+
+    it("replaces all the preferences, including every target gender", async () => {
+      const { repository } = await setup();
+      const created = await createOrFail(
+        repository,
+        newProfile("mint_01", {
+          preferences: {
+            minAge: 24,
+            maxAge: 32,
+            targetGenders: ["male", "non_binary"],
+            radiusKm: 30,
+          },
+        }),
+      );
+      const preferences = { minAge: 30, maxAge: 40, targetGenders: ["female"], radiusKm: 5 };
+      const updated = await repository.updateProfile(created.userId, { preferences });
+      expect(updated?.preferences).toEqual(preferences);
+      expect((await repository.findProfileById(created.userId))?.preferences).toEqual(preferences);
+    });
+
+    it("stores a new location with its place name, and null clears the old name", async () => {
+      const { repository } = await setup();
+      const { userId } = await createOrFail(repository, newProfile("mint_01"));
+      const moved = await repository.updateProfile(userId, {
+        location: {
+          latitude: 18.7883,
+          longitude: 98.9853,
+          placeName: "Chiang Mai, Mueang Chiang Mai",
+        },
+      });
+      expect(moved).toMatchObject({
+        latitude: 18.7883,
+        longitude: 98.9853,
+        placeName: "Chiang Mai, Mueang Chiang Mai",
+      });
+      const cleared = await repository.updateProfile(userId, {
+        location: { latitude: 12.5, longitude: 100.9, placeName: null },
+      });
+      expect(cleared?.placeName).toBeNull();
+      const renamed = await repository.updateProfile(userId, { displayName: "Mint" });
+      expect(renamed?.placeName).toBeNull();
+    });
+
+    it("updates nobody for an unknown user, or an ID that is not a UUID", async () => {
+      const { repository } = await setup();
+      expect(await repository.updateProfile(NO_SUCH_UUID, { displayName: "Ghost" })).toBeNull();
+      expect(await repository.updateProfile(NO_SUCH_USER, { displayName: "Ghost" })).toBeNull();
+    });
+  });
+}
+
+/**
+ * Behaviour tests for `ProfilePhotoRepository`.
+ * @param setup - builds a fresh repository with alice (a `.jpg` key) and bob (a `.webp` key)
+ */
+export function describeProfilePhotoRepository(setup: () => Promise<PhotoWorld>): void {
+  describe("ProfilePhotoRepository", () => {
+    it("finds each user's photo key by its photo ID", async () => {
+      const { repository, alice, bob } = await setup();
+      expect(await repository.findPhotoKeyByPhotoId(photoIdOf(alice.photoKey))).toBe(
+        alice.photoKey,
+      );
+      expect(await repository.findPhotoKeyByPhotoId(photoIdOf(bob.photoKey))).toBe(bob.photoKey);
+    });
+
+    it("finds the key for every allowed extension, also from a photo ID in capitals", async () => {
+      const { repository, alice } = await setup();
+      const photoId = Bun.randomUUIDv7();
+      for (const extension of ["png", "jpg", "jpeg", "webp"]) {
+        const photoKey = `profile-photos/${photoId}.${extension}`;
+        await repository.replacePhotoKey(alice.userId, photoKey);
+        expect(await repository.findPhotoKeyByPhotoId(photoId)).toBe(photoKey);
+      }
+      expect(await repository.findPhotoKeyByPhotoId(photoId.toUpperCase())).toBe(
+        `profile-photos/${photoId}.webp`,
+      );
+    });
+
+    it("does not find an unknown photo, a non-UUID ID, another extension or another folder", async () => {
+      const { repository, alice, bob } = await setup();
+      expect(await repository.findPhotoKeyByPhotoId(NO_SUCH_UUID)).toBeNull();
+      expect(await repository.findPhotoKeyByPhotoId(NO_SUCH_USER)).toBeNull();
+      const gifId = Bun.randomUUIDv7();
+      await repository.replacePhotoKey(alice.userId, `profile-photos/${gifId}.gif`);
+      expect(await repository.findPhotoKeyByPhotoId(gifId)).toBeNull();
+      const uploadId = Bun.randomUUIDv7();
+      await repository.replacePhotoKey(bob.userId, `uploads/${uploadId}.jpg`);
+      expect(await repository.findPhotoKeyByPhotoId(uploadId)).toBeNull();
+    });
+
+    it("replaces a photo key and returns the old one", async () => {
+      const { repository, alice } = await setup();
+      const newKey = `profile-photos/${Bun.randomUUIDv7()}.png`;
+      expect(await repository.replacePhotoKey(alice.userId, newKey)).toBe(alice.photoKey);
+      expect(await repository.findPhotoKeyByPhotoId(photoIdOf(newKey))).toBe(newKey);
+      expect(await repository.findPhotoKeyByPhotoId(photoIdOf(alice.photoKey))).toBeNull();
+    });
+
+    it("replaces nothing for an unknown user, or an ID that is not a UUID", async () => {
+      const { repository } = await setup();
+      const newKey = `profile-photos/${Bun.randomUUIDv7()}.png`;
+      expect(await repository.replacePhotoKey(NO_SUCH_UUID, newKey)).toBeNull();
+      expect(await repository.replacePhotoKey(NO_SUCH_USER, newKey)).toBeNull();
+      expect(await repository.findPhotoKeyByPhotoId(photoIdOf(newKey))).toBeNull();
+    });
+
+    it("gives each of two replaces at the same time the key it really replaced", async () => {
+      const { repository, alice } = await setup();
+      const first = `profile-photos/${Bun.randomUUIDv7()}.jpg`;
+      const second = `profile-photos/${Bun.randomUUIDv7()}.jpg`;
+      const oldKeys = await Promise.all([
+        repository.replacePhotoKey(alice.userId, first),
+        repository.replacePhotoKey(alice.userId, second),
+      ]);
+      // One replaced the original key, the other replaced the key the first one stored.
+      expect(oldKeys).toContain(alice.photoKey);
+      expect(new Set(oldKeys).size).toBe(2);
+      const finalKey = oldKeys.includes(first) ? second : first;
+      expect(await repository.findPhotoKeyByPhotoId(photoIdOf(finalKey))).toBe(finalKey);
     });
   });
 }

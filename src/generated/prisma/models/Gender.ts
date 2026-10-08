@@ -15,7 +15,8 @@ import type * as Prisma from "../internal/prismaNamespace"
 /**
  * Model Gender
  * One gender option, used for a user's own gender and for target genders.
- * The four rows (male, female, non_binary, other) are added by the initial migration.
+ * The four rows (female, male, non_binary, prefer_not_to_say) come from the migrations: the
+ * first one added male, female, non_binary and other; the second replaced other.
  */
 export type GenderModel = runtime.Types.Result.DefaultSelection<Prisma.$GenderPayload>
 
