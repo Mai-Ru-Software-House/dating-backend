@@ -22,7 +22,8 @@
     "@prisma/client": "7.10.0",
     "@sinclair/typebox": "^0.34.52",
     "elysia": "^1.4.30",
-    "pg": "8.23.1"
+    "pg": "8.23.1",
+    "prisma": "7.10.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -31,7 +32,6 @@
     "eslint": "^10.12.0",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.9",
-    "prisma": "7.10.0",
     "typescript": "~5.9.0",
     "typescript-eslint": "^8.71.0"
   }

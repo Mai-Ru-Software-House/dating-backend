@@ -1,0 +1,13 @@
+.git
+.github
+.claude
+.env
+.env.*
+!.env.example
+node_modules
+docs
+test
+dist
+pictures
+*.md
+CLAUDE.local.md
