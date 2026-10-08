@@ -5,10 +5,8 @@
  */
 import { afterAll, beforeEach, describe, expect, it } from "bun:test";
 
-import {
-  createPrismaMatchProfileReader,
-  photoIdFromKey,
-} from "../../src/data/prismaMatchProfileReader";
+import { photoIdFromKey } from "../../src/data/photoKey";
+import { createPrismaMatchProfileReader } from "../../src/data/prismaMatchProfileReader";
 import type { PrismaClient } from "../../src/generated/prisma/client";
 import { createMatchEngineClient } from "../../src/services/match/engineClient";
 import { createMatchService } from "../../src/services/match/matchService";

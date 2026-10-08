@@ -5,7 +5,7 @@
 import { describe, expect, it } from "bun:test";
 
 import { createApp } from "../../src/app";
-import { testConfig } from "../messaging/fixtures";
+import { createTestService, testConfig } from "../messaging/fixtures";
 import { createTestAuth } from "./fixtures";
 
 const HTTP_OK = 200;
@@ -16,7 +16,11 @@ const HTTP_UNAUTHORIZED = 401;
 
 async function setup() {
   const { service } = await createTestAuth();
-  const app = createApp(testConfig, { authService: service });
+  // Messaging runs on in-memory data here, so the test needs no database.
+  const app = createApp(testConfig, {
+    authService: service,
+    messagingService: createTestService().service,
+  });
 
   function request(method: string, path: string, body?: unknown, token?: string) {
     const headers: Record<string, string> = {};

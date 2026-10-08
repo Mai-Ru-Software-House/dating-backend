@@ -11,7 +11,15 @@ import { openapiPlugin } from "./plugins/openapi";
 import { healthRoutes } from "./routes/health";
 import { createPrismaAuthRepository } from "./data/prismaAuthRepository";
 import { createPrismaClient } from "./data/prismaClient";
+import {
+  createPrismaFavoritesRepository,
+  createPrismaNotesRepository,
+} from "./data/prismaFavoritesNotesRepository";
 import { createPrismaMatchProfileReader } from "./data/prismaMatchProfileReader";
+import {
+  createPrismaMessageRepository,
+  createPrismaUserReader,
+} from "./data/prismaMessageRepository";
 import type { PrismaClient } from "./generated/prisma/client";
 import { authRoutes } from "./services/auth/authRoutes";
 import { createAuthService, type AuthService } from "./services/auth/authService";
@@ -25,14 +33,6 @@ import {
   createFavoritesNotesService,
   type FavoritesNotesService,
 } from "./services/favoritesNotes/favoritesNotesService";
-import {
-  createInMemoryFavoritesRepository,
-  createInMemoryNotesRepository,
-} from "./services/favoritesNotes/inMemoryFavoritesNotesRepository";
-import {
-  createInMemoryMessageRepository,
-  createInMemoryUserReader,
-} from "./services/messaging/inMemoryMessageRepository";
 import { createMatchEngineClient } from "./services/match/engineClient";
 import { matchRoutes } from "./services/match/matchRoutes";
 import { createMatchService, type MatchService } from "./services/match/matchService";
@@ -81,17 +81,25 @@ export function createApp(config: Config, dependencies: AppDependencies = {}) {
       refreshTtlDays: config.refreshTokenTtlDays,
     });
   const sessionValidator = dependencies.sessionValidator ?? authService.validateSession;
-  // In-memory data until the Data Access Layer (Chuan) provides the real repositories. The
+  // PostgreSQL repositories (written by Vic as a proposal for Chuan, see docs/data-access.md). The
   // favorites repository and the user reader are shared, so the chat list shows the favorites
   // that the Favorites & Notes Service saved.
-  const users = createInMemoryUserReader();
-  const favorites = createInMemoryFavoritesRepository();
+  const users = createPrismaUserReader(getPrisma());
+  const favorites = createPrismaFavoritesRepository(getPrisma());
   const messagingService =
     dependencies.messagingService ??
-    createMessagingService({ messages: createInMemoryMessageRepository(), favorites, users });
+    createMessagingService({
+      messages: createPrismaMessageRepository(getPrisma()),
+      favorites,
+      users,
+    });
   const favoritesNotesService =
     dependencies.favoritesNotesService ??
-    createFavoritesNotesService({ favorites, notes: createInMemoryNotesRepository(), users });
+    createFavoritesNotesService({
+      favorites,
+      notes: createPrismaNotesRepository(getPrisma()),
+      users,
+    });
 
   const matchService =
     dependencies.matchService ??

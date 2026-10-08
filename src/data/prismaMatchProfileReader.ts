@@ -5,20 +5,8 @@
  */
 import type { Prisma, PrismaClient } from "../generated/prisma/client";
 import type { MatchProfile, MatchProfileReader } from "../services/match/matchTypes";
-
-/**
- * Turn the RustFS object key of a profile photo into the `photoId` of the API. Proposal: the key
- * is `profile-photos/<photoId>.<extension>`, so the ID is the file name without the extension.
- * @param photoKey - the object key stored in `users.photo_key`
- * @returns the photo ID
- */
-export function photoIdFromKey(photoKey: string): string {
-  const fileName = photoKey.slice(photoKey.lastIndexOf("/") + 1);
-  const dot = fileName.lastIndexOf(".");
-  return dot > 0 ? fileName.slice(0, dot) : fileName;
-}
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { isUuid } from "./ids";
+import { photoIdFromKey } from "./photoKey";
 
 const profileInclude = { targetGenders: { select: { genderCode: true } } } as const;
 
@@ -53,7 +41,7 @@ export function createPrismaMatchProfileReader(prisma: PrismaClient): MatchProfi
   return {
     async findProfile(userId) {
       // The database rejects text that is not a UUID, so such an ID is simply "not found".
-      if (!UUID_PATTERN.test(userId)) {
+      if (!isUuid(userId)) {
         return null;
       }
       const user = await prisma.user.findUnique({
