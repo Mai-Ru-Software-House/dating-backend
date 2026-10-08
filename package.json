@@ -22,6 +22,7 @@
     "@prisma/client": "7.10.0",
     "@sinclair/typebox": "^0.34.52",
     "elysia": "^1.4.30",
+    "jose": "6.2.12",
     "pg": "8.23.1",
     "prisma": "7.10.0"
   },

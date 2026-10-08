@@ -9,7 +9,14 @@ import { corsPlugin } from "./plugins/cors";
 import { errorHandler } from "./plugins/errors";
 import { openapiPlugin } from "./plugins/openapi";
 import { healthRoutes } from "./routes/health";
-import { stubSessionValidator, type SessionValidator } from "./services/auth/sessionValidator";
+import { createPrismaAuthRepository } from "./data/prismaAuthRepository";
+import { createPrismaClient } from "./data/prismaClient";
+import type { PrismaClient } from "./generated/prisma/client";
+import { authRoutes } from "./services/auth/authRoutes";
+import { createAuthService, type AuthService } from "./services/auth/authService";
+import { createPasswordHasher } from "./services/auth/passwordHasher";
+import type { SessionValidator } from "./services/auth/sessionValidator";
+import { createTokenService } from "./services/auth/tokens";
 import { locationRoutes } from "./services/location/locationRoutes";
 import { createLocationService, type LocationService } from "./services/location/locationService";
 import {
@@ -25,6 +32,9 @@ import {
 
 /** Parts of the app that tests can replace, for example to avoid real network calls. */
 export interface AppDependencies {
+  /** Shared database client. Created from DATABASE_URL on first use when not given. */
+  prisma?: PrismaClient;
+  authService?: AuthService;
   locationService?: LocationService;
   sessionValidator?: SessionValidator;
   messagingService?: MessagingService;
@@ -39,8 +49,23 @@ export interface AppDependencies {
 export function createApp(config: Config, dependencies: AppDependencies = {}) {
   const locationService =
     dependencies.locationService ?? createLocationService({ baseUrl: config.nominatimUrl });
-  // Until the Auth Service exists, the stub accepts no token, so protected routes answer 401.
-  const sessionValidator = dependencies.sessionValidator ?? stubSessionValidator;
+  let prismaClient = dependencies.prisma;
+  const getPrisma = () => (prismaClient ??= createPrismaClient(config.databaseUrl));
+  const authService =
+    dependencies.authService ??
+    createAuthService({
+      repository: createPrismaAuthRepository(getPrisma()),
+      hasher: createPasswordHasher({
+        memoryCost: config.argon2MemoryCost,
+        timeCost: config.argon2TimeCost,
+      }),
+      tokens: createTokenService({
+        secret: config.jwtSecret,
+        accessTtlSeconds: config.accessTokenTtlSeconds,
+      }),
+      refreshTtlDays: config.refreshTokenTtlDays,
+    });
+  const sessionValidator = dependencies.sessionValidator ?? authService.validateSession;
   // In-memory data until the Data Access Layer (Chuan) provides the real repositories.
   const messagingService =
     dependencies.messagingService ??
@@ -55,6 +80,7 @@ export function createApp(config: Config, dependencies: AppDependencies = {}) {
     .use(corsPlugin(config))
     .use(openapiPlugin())
     .use(healthRoutes)
+    .use(authRoutes(authService))
     .use(locationRoutes(locationService))
     .use(messagingRoutes(messagingService, sessionValidator));
 }
