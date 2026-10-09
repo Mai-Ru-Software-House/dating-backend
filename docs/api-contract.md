@@ -29,8 +29,7 @@ This file is checked against the other repos: the app (`dating-frontend`, Tee), 
 | `GET /candidates` | Vic and Tae | built (reads profiles from PostgreSQL) | Find Matches (search) |
 | `GET /conversations`, `GET /conversations/{userId}/messages`, `POST /conversations/{userId}/messages`, `PATCH /conversations/{userId}`, `POST /messages/{messageId}/replies`, `GET /messages?unread=true` | Vic | built | Chat list, conversation, send, reply, unread list |
 | `GET /favorites`, `PUT /favorites/{userId}`, `DELETE /favorites/{userId}` | Vic | built | Add Favorite |
-| `GET /notes`, `POST /notes`, `GET /notes/people`, `GET /users/{userId}/notes`, `POST /users/{userId}/notes` | Vic | built | Record and view notes (the `/users/{userId}/notes` paths are the ones in the functional test plan) |
-| `PATCH /notes/{noteId}`, `DELETE /notes/{noteId}` | Vic | not built (the app asks for them, not in the features) | Edit and delete a note |
+| `GET /notes`, `POST /notes`, `GET /notes/people`, `PATCH /notes/{noteId}`, `DELETE /notes/{noteId}`, `GET /users/{userId}/notes`, `POST /users/{userId}/notes` | Vic | built | Record, view, edit and delete notes (the `/users/{userId}/notes` paths are the ones in the functional test plan) |
 | `POST /internal/v1/recommendations`, `POST /internal/v1/candidates/search` (Match Engine) | Tae (engine), Vic (caller) | built (caller), follows the engine | Match Service |
 
 The photo routes are Tae's and not built yet. Sign up (`POST /users`) is built, but it takes the photo from a temporary upload (`photoUploadId`), and the running server has no upload store until Tae's RustFS version exists. Until then every sign up answers `400` with `field` `photoUploadId`. The seed users can log in.
@@ -58,6 +57,7 @@ The photo routes are Tae's and not built yet. Sign up (`POST /users`) is built, 
 | `INVALID_CREDENTIALS` | 401 | Unknown username or wrong password at login (the same answer for both) |
 | `NOT_FOUND` | 404 | The path does not exist |
 | `USER_NOT_FOUND` | 404 | The user in the path or body does not exist |
+| `NOTE_NOT_FOUND` | 404 | The note does not exist, is not mine, or the ID is not a note ID (the same answer for all three) |
 | `MESSAGE_NOT_FOUND` | 404 | The message does not exist, or the logged in user is not its sender or receiver |
 | `PLACE_NOT_FOUND` | 404 | Nominatim has no place for that point |
 | `PHOTO_NOT_FOUND` | 404 | The photo does not exist |
@@ -665,7 +665,7 @@ Query:
 | ------------- | ------ | -------- |
 | `aboutUserId` | string | Required |
 
-Response `200`: notes I wrote about that user, newest first. Nobody else can read them.
+Response `200`: notes I wrote about that user, newest first (by `createdAt`, an edit does not change the order). Nobody else can read them. `updatedAt` is `null` until the note is edited, then the UTC time of the last edit.
 
 ```json
 {
@@ -674,7 +674,8 @@ Response `200`: notes I wrote about that user, newest first. Nobody else can rea
       "noteId": "not_7",
       "aboutUserId": "usr_b2",
       "text": "Coffee at Siam on Saturday 4 Oct, 2 pm.",
-      "createdAt": "2026-10-03T14:20:00.000Z"
+      "createdAt": "2026-10-03T14:20:00.000Z",
+      "updatedAt": null
     }
   ]
 }
@@ -711,7 +712,34 @@ Errors:
 | 400    | `INVALID_INPUT`  | `text` empty or too long, or `aboutUserId` is me |
 | 404    | `USER_NOT_FOUND` | No user with that ID                          |
 
-Notes: editing and deleting notes are not in the features, so v1 has neither. Built (Vic, 8 Oct): the same two routes also exist as `GET /users/{userId}/notes` and `POST /users/{userId}/notes` (body `{ "text" }`), because the functional test plan uses these paths (NT07: an unknown user answers `404 USER_NOT_FOUND`; NT08: the logged in user only ever sees their own notes about that user). `GET /notes/people` answers `{ "people": [{ "user": UserSummary, "noteCount": 2, "lastNote": { "noteId", "text", "createdAt" } }] }`, the person with the newest note first. `PATCH` and `DELETE /notes/{noteId}` (Tee, pending 8.11) are not built.
+Notes: built (Vic, 8 Oct): the same two routes also exist as `GET /users/{userId}/notes` and `POST /users/{userId}/notes` (body `{ "text" }`), because the functional test plan uses these paths (NT07: an unknown user answers `404 USER_NOT_FOUND`; NT08: the logged in user only ever sees their own notes about that user). `GET /notes/people` answers `{ "people": [{ "user": UserSummary, "noteCount": 2, "lastNote": { "noteId", "text", "createdAt", "updatedAt" } }] }`, the person with the newest note first.
+
+### PATCH /notes/{noteId}
+
+Supports: Edit a note (the Notes screen in the app).
+
+Status: built (Vic, 9 Oct). Session: **required**.
+
+Body (JSON only): `{ "text": "Coffee at Siam on Saturday 4 Oct, 3 pm." }`. The text has the same rule as `POST /notes`: 1 to 500 characters after trimming spaces. Only the text can change; the note stays about the same person.
+
+Response `200`: the changed note, the same shape as one item of `GET /notes`, with `updatedAt` set by the server.
+
+Errors:
+
+| Status | Code             | When                                                                               |
+| ------ | ---------------- | ---------------------------------------------------------------------------------- |
+| 400    | `INVALID_INPUT`  | `text` empty or too long (`field` `text`)                                          |
+| 404    | `NOTE_NOT_FOUND` | The note does not exist, is not mine, or the ID is not valid (the same answer, so nothing about other people's notes is revealed) |
+
+### DELETE /notes/{noteId}
+
+Supports: Delete a note (the Notes screen in the app, after the "Delete this note?" question).
+
+Status: built (Vic, 9 Oct). Session: **required**.
+
+Response `204`, no body. The note is gone for good, and its ID is not used again.
+
+Errors: `404 NOTE_NOT_FOUND` when the note does not exist, is not mine, or the ID is not valid. A second delete of the same note is therefore a `404`.
 
 ## Internal: Backend to Match Engine (Vic & Tae)
 
@@ -798,6 +826,7 @@ The routes `GET /internal/v1/match-profiles/{userId}` and `GET /internal/v1/matc
 
 ## Change log
 
+- 9 October 2026 (Vic): `PATCH /notes/{noteId}` and `DELETE /notes/{noteId}` are built, because the app has the edit and the delete screens. Notes (and `lastNote` in `GET /notes/people`) have a new field `updatedAt`, `null` until the note is edited. New error code `NOTE_NOT_FOUND`. The text limit stays 500 characters (the app's own rule and test plan A7, not the 2000 of the database column).
 - 9 October 2026 (Vic, after Chuan's pull requests 4 and 5): Auth, sign up, the own profile, the candidate profile and the username check are built. Migration 2 replaced the gender `other` with `prefer_not_to_say` and made `users.photo_key` unique. The rules of `POST /users` and `PATCH /users/me` now state the limits the code enforces (name 1 to 50 characters, password up to 1000, ages 18 to 120, radius 1 to 20000 whole km). Statuses "to review" are gone. The photo routes are still Tae's and not built, so sign up cannot finish on a running server yet.
 - 9 October 2026 (Vic, second pass after talking to Tae and Tee): the photo flow follows the app (`POST /photo-uploads`, `DELETE /photo-uploads/{uploadId}`, `photoUploadId` in the JSON sign up, `PUT /users/me/photo`); `bio` and `interests` are dropped (team decision); search stays one way in the engine, so the backend keeps its mutual pre-filter.
 - 9 October 2026 (Vic): checked against the app, the engine, the infra repo and the schema. Photos are sent as `photoUrl` (a path), as the app expects. `TOKEN_EXPIRED` is removed: an expired access token answers `UNAUTHENTICATED`. `DELETE /sessions/current` takes an optional `{ refreshToken }`. The rules of the functional test plan (A1 to A8) are written in as decided. Statuses now say built or not built. Auth, places, messaging, favorites, notes and match are built; profile and photos are not.

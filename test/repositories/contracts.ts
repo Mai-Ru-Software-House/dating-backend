@@ -18,6 +18,7 @@ import type { NewProfile, ProfileRepository } from "../../src/services/profile/p
 const T0 = new Date("2026-10-08T10:00:00.000Z").getTime();
 const MINUTE_MS = 60_000;
 const NO_SUCH_USER = "99999";
+const NO_SUCH_NOTE = "999999";
 const NO_SUCH_UUID = "00000000-0000-7000-8000-000000000000";
 
 /** A moment `minutes` after T0. */
@@ -401,6 +402,56 @@ export function describeNotesRepository(setup: () => Promise<NotesWorld>): void 
       const { repository } = await setup();
       expect(await repository.listNotesAbout(NO_SUCH_USER, NO_SUCH_USER)).toEqual([]);
       expect(await repository.listNotePeople(NO_SUCH_USER)).toEqual([]);
+    });
+
+    it("starts a note with updatedAt equal to createdAt, and an edit changes the text and updatedAt only", async () => {
+      const { repository, alice, bob } = await setup();
+      const note = await repository.insertNote({
+        authorId: alice,
+        subjectUserId: bob,
+        text: "before",
+        createdAt: at(0),
+      });
+      expect(note.updatedAt.getTime()).toBe(note.createdAt.getTime());
+
+      const changed = await repository.updateNoteText(note.noteId, alice, "after", at(5));
+      expect(changed).toMatchObject({
+        noteId: note.noteId,
+        authorId: alice,
+        subjectUserId: bob,
+        text: "after",
+      });
+      expect(changed?.createdAt.getTime()).toBe(at(0).getTime());
+      expect(changed?.updatedAt.getTime()).toBe(at(5).getTime());
+      const listed = await repository.listNotesAbout(alice, bob);
+      expect(listed.map((item) => item.text)).toEqual(["after"]);
+      expect(listed[0]?.updatedAt.getTime()).toBe(at(5).getTime());
+    });
+
+    it("changes and deletes a note only for its author, and treats other IDs as not found", async () => {
+      const { repository, alice, bob } = await setup();
+      const note = await repository.insertNote({
+        authorId: alice,
+        subjectUserId: bob,
+        text: "mine",
+        createdAt: at(0),
+      });
+      const notIds = ["", "abc", "0", "-1", "1.5", "99999999999", NO_SUCH_NOTE];
+      for (const noteId of notIds) {
+        expect(await repository.updateNoteText(noteId, alice, "x", at(1))).toBeNull();
+        expect(await repository.deleteNote(noteId, alice)).toBe(false);
+      }
+      expect(await repository.updateNoteText(note.noteId, bob, "stolen", at(1))).toBeNull();
+      expect(await repository.updateNoteText(note.noteId, NO_SUCH_USER, "x", at(1))).toBeNull();
+      expect(await repository.deleteNote(note.noteId, bob)).toBe(false);
+      expect((await repository.listNotesAbout(alice, bob)).map((item) => item.text)).toEqual([
+        "mine",
+      ]);
+
+      expect(await repository.deleteNote(note.noteId, alice)).toBe(true);
+      expect(await repository.deleteNote(note.noteId, alice)).toBe(false);
+      expect(await repository.listNotesAbout(alice, bob)).toEqual([]);
+      expect(await repository.listNotePeople(alice)).toEqual([]);
     });
   });
 }

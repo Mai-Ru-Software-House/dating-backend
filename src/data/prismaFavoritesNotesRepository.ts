@@ -10,7 +10,7 @@ import type {
   NotesRepository,
   StoredNote,
 } from "../services/favoritesNotes/favoritesNotesRepository";
-import { isUuid } from "./ids";
+import { isUuid, parseNoteId } from "./ids";
 
 interface NoteRow {
   id: number;
@@ -18,6 +18,7 @@ interface NoteRow {
   subjectUserId: string;
   body: string;
   createdAt: Date;
+  updatedAt: Date;
 }
 
 function toStoredNote(row: NoteRow): StoredNote {
@@ -27,6 +28,7 @@ function toStoredNote(row: NoteRow): StoredNote {
     subjectUserId: row.subjectUserId,
     text: row.body,
     createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }
 
@@ -103,6 +105,7 @@ export function createPrismaNotesRepository(prisma: PrismaClient): NotesReposito
           subjectUserId: note.subjectUserId,
           body: note.text,
           createdAt: note.createdAt,
+          updatedAt: note.createdAt,
         },
       });
       return toStoredNote(row);
@@ -140,6 +143,32 @@ export function createPrismaNotesRepository(prisma: PrismaClient): NotesReposito
         noteCount: countBySubject.get(row.subjectUserId) ?? 1,
         lastNote: toStoredNote(row),
       }));
+    },
+
+    async updateNoteText(noteId, authorId, text, updatedAt) {
+      const id = parseNoteId(noteId);
+      if (id === null || !isUuid(authorId)) {
+        return null;
+      }
+      // The author is part of the condition, so someone else's note is "not found".
+      const result = await prisma.note.updateMany({
+        where: { id, authorId },
+        data: { body: text, updatedAt },
+      });
+      if (result.count === 0) {
+        return null;
+      }
+      const row = await prisma.note.findUnique({ where: { id } });
+      return row === null ? null : toStoredNote(row);
+    },
+
+    async deleteNote(noteId, authorId) {
+      const id = parseNoteId(noteId);
+      if (id === null || !isUuid(authorId)) {
+        return false;
+      }
+      const result = await prisma.note.deleteMany({ where: { id, authorId } });
+      return result.count > 0;
     },
   };
 }

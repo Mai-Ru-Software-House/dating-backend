@@ -29,7 +29,7 @@ Base path `/api/v1`. Full contract: [docs/api-contract.md](docs/api-contract.md)
 | Matching  | `GET /recommendations`, `GET /candidates`                                                                                                                                   | built            |
 | Messaging | `GET /conversations`, `GET` and `POST /conversations/{userId}/messages`, `PATCH /conversations/{userId}`, `POST /messages/{messageId}/replies`, `GET /messages?unread=true` | built            |
 | Favorites | `GET /favorites`, `PUT` and `DELETE /favorites/{userId}`                                                                                                                    | built            |
-| Notes     | `GET` and `POST /notes`, `GET /notes/people`, `GET` and `POST /users/{userId}/notes`                                                                                        | built            |
+| Notes     | `GET` and `POST /notes`, `PATCH` and `DELETE /notes/{noteId}`, `GET /notes/people`, `GET` and `POST /users/{userId}/notes`                                                  | built            |
 
 Auth, messaging, favorites and notes read and write PostgreSQL through repositories that Vic wrote and Chuan merged (pull request 4). Chuan wrote the Profile Service and its repositories (pull request 5). The Data Access Layer is described in [docs/data-access.md](docs/data-access.md). The server stops cleanly on `SIGTERM` and refuses a request body over 2 MiB.
 

@@ -69,10 +69,13 @@ export function createInMemoryNotesRepository(
   initial: { authorId: string; subjectUserId: string; text: string; createdAt: Date }[] = [],
 ): NotesRepository {
   const notes: StoredNote[] = [];
+  // A counter, not `notes.length`, so a deleted note's ID is never used again.
+  let lastNumber = 0;
 
-  function store(note: Omit<StoredNote, "noteId">): StoredNote {
-    const noteId = `${NOTE_ID_PREFIX}${String(notes.length + 1).padStart(NOTE_ID_DIGITS, "0")}`;
-    const stored = { noteId, ...note };
+  function store(note: Omit<StoredNote, "noteId" | "updatedAt">): StoredNote {
+    lastNumber += 1;
+    const noteId = `${NOTE_ID_PREFIX}${String(lastNumber).padStart(NOTE_ID_DIGITS, "0")}`;
+    const stored = { noteId, ...note, updatedAt: note.createdAt };
     notes.push(stored);
     return stored;
   }
@@ -113,6 +116,25 @@ export function createInMemoryNotesRepository(
         }
       }
       return [...people.values()];
+    },
+
+    async updateNoteText(noteId, authorId, text, updatedAt) {
+      const note = notes.find((item) => item.noteId === noteId && item.authorId === authorId);
+      if (note === undefined) {
+        return null;
+      }
+      note.text = text;
+      note.updatedAt = updatedAt;
+      return { ...note };
+    },
+
+    async deleteNote(noteId, authorId) {
+      const index = notes.findIndex((item) => item.noteId === noteId && item.authorId === authorId);
+      if (index < 0) {
+        return false;
+      }
+      notes.splice(index, 1);
+      return true;
     },
   };
 }

@@ -16,6 +16,7 @@ export const ERROR_CODES = {
   notFound: "NOT_FOUND",
   userNotFound: "USER_NOT_FOUND",
   messageNotFound: "MESSAGE_NOT_FOUND",
+  noteNotFound: "NOTE_NOT_FOUND",
   placeNotFound: "PLACE_NOT_FOUND",
   usernameTaken: "USERNAME_TAKEN",
   geocoderUnavailable: "GEOCODER_UNAVAILABLE",
