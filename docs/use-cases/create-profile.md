@@ -45,7 +45,7 @@ Postconditions: profile is stored, the user can log in, the user is visible to F
 
 ## What this means for the backend
 
-- The photo is uploaded **before** the account exists, so there must be an unauthenticated temporary upload that expires and gets cleaned up if the user never submits. **Changed (Tae, 4 Oct):** there is no temporary upload. The app holds the photo and sends it with `POST /users` at Submit (see `docs/api-contract.md`).
+- The photo is uploaded **before** the account exists, so there must be an unauthenticated temporary upload that expires and gets cleaned up if the user never submits. **Changed again (Tee, Vic, Tae, 9 Oct):** the temporary upload is back, as the app does it: `POST /photo-uploads` first (kept one hour), then `POST /users` with the `photoUploadId` (see `docs/api-contract.md`). This replaces the one request sign up of 4 Oct.
 - The app needs a way to check "username taken" before the final submit (Ext A), plus the same check again at submit time to avoid a race.
 - Validation errors must name the field, so 400 responses should include which field failed (for example `error.field`).
 - Ext A at submit time is `409 USERNAME_TAKEN`. Other validation problems are `400`.
@@ -57,3 +57,5 @@ Postconditions: profile is stored, the user can log in, the user is visible to F
 - Supported image formats, max file size, resize target
 - Can `targetGender` have more than one value? (The Match Engine design already allows more than one.)
 - Edit Profile is not a use case yet, but the work assignments give Profile Service "update profile"
+
+Answered since: the rules are in `docs/api-contract.md` (A1 to A8), a user can have more than one target gender, and Edit Profile can change everything except the username and the photo (the photo has its own endpoint), with no password change in v1 (`docs/decisions.md`).

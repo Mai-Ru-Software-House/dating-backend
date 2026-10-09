@@ -1,13 +1,13 @@
 # What the app must change
 
-For Tee. Only rows 8 and 12 need an app change (and row 7 if the app really needs to edit notes); the other rows are information. The backend follows `docs/api-contract.md`. This page lists where the app (`dating-frontend`, `main` of 9 October 2026) differs from the contract and from the backend as built, so each change is clear. The routes marked "built" can be tried today (`GET /openapi` on a running backend lists them).
+For Tee. Only row 8 needs an app change (and row 7 if the app really needs to edit notes); the other rows are information. The backend follows `docs/api-contract.md`. This page lists where the app (`dating-frontend`, `main` of 9 October 2026) differs from the contract and from the backend as built, so each change is clear. The routes marked "built" can be tried today (`GET /openapi` on a running backend lists them).
 
 ## App versus backend
 
 | # | Topic | The app today | The backend | Status |
 | - | ----- | ------------- | ----------- | ------ |
-| 1 | Photo upload at sign up | Two steps: `POST /photo-uploads`, then `photoUploadId` in the JSON `POST /users`; `DELETE /photo-uploads/{uploadId}` with `X-Delete-Token` | The same. The backend follows the app. Nothing to change | not built (Tae, Chuan) |
-| 2 | Change the photo | `PUT /users/me/photo`, answer `{ photoUrl }` | The same | not built (Tae) |
+| 1 | Photo upload at sign up | Two steps: `POST /photo-uploads`, then `photoUploadId` in the JSON `POST /users`; `DELETE /photo-uploads/{uploadId}` with `X-Delete-Token` | The same. The backend follows the app. Nothing to change | sign up built (Chuan), the upload is not built (Tae) |
+| 2 | Change the photo | `PUT /users/me/photo`, answer `{ photoUrl }` | The same | not built (Tae). Chuan's database function for the new photo key is built |
 | 3 | Photo field | `photoUrl` (a path) | `photoUrl`, for example `/api/v1/photos/pho_b2`. The same field name, so nothing to change here | built |
 | 4 | Logout | `DELETE /sessions/current` with `{ refreshToken }` | The same. Without a body, all refresh tokens of the user are cancelled | built |
 | 5 | Expired token | Refreshes on `401 UNAUTHENTICATED` | The same. There is no `TOKEN_EXPIRED` code | built |
@@ -17,7 +17,7 @@ For Tee. Only rows 8 and 12 need an app change (and row 7 if the app really need
 | 9 | Search results | Shows what `GET /candidates` returns | Only users who also accept the searcher are returned (an empty search gives the same people as the recommendations) | built |
 | 10 | Paging recommendations | `limit` | `limit` and `offset`, `hasMore` in the answer. `offset + limit` is at most 200 | built |
 | 11 | Place name | "province, district" | The same, for example "Bangkok, Pathum Wan" | built |
-| 12 | Gender values | `female`, `male`, `non_binary`, `prefer_not_to_say` | The database has `other` instead of `prefer_not_to_say`. Open question for Tee and Chuan | open |
+| 12 | Gender values | `female`, `male`, `non_binary`, `prefer_not_to_say` | The database has the same four values since migration 2 (`prefer_not_to_say` replaced `other`). Nothing to change | built |
 
 ## Rules the backend checks (the app may show them early)
 
@@ -33,4 +33,4 @@ For Tee. Only rows 8 and 12 need an app change (and row 7 if the app really need
 
 ## What is saved
 
-Everything the backend has built is saved in PostgreSQL: login tokens, messages, favorites, notes and the match lists (use the seed users, for example `alice` with `Alice2026`). Profile sign up and photos are not built yet, so only the seed users exist.
+Everything the backend has built is saved in PostgreSQL: login tokens, messages, favorites, notes and the match lists (use the seed users, for example `alice` with `Alice2026`). Sign up, the own profile, the candidate profile and the username check are built (Chuan). Sign up cannot finish yet, because it needs the photo upload that Tae builds on RustFS: until then `POST /users` answers `400` with `field` `photoUploadId`. So only the seed users exist.

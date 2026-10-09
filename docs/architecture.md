@@ -18,14 +18,14 @@ PostgreSQL 18    RustFS (photos)   Match Engine (FastAPI)   Nominatim (OpenStree
 | Component | Role | Owner | State |
 | --------- | ---- | ----- | ----- |
 | Backend, web server framework and REST API layer | App setup, config, CORS, error format, session check, route registration | Vic | built |
-| Auth Service | Login, refresh, logout, Argon2id passwords, JWT access tokens | Chuan | built, to review |
-| Profile Service | Sign up, own profile, candidate profile | Chuan | not built |
+| Auth Service | Login, refresh, logout, Argon2id passwords, JWT access tokens | Chuan | built |
+| Profile Service | Sign up, own profile, candidate profile | Chuan | built (sign up waits for Tae's photo upload) |
 | Photo functions | Upload, validate, store in RustFS, serve profile photos | Tae | not built |
 | Location Service | Place name from coordinates (Nominatim), distance in km | Vic | built |
 | Messaging Service | Send, reply, chat list (favorites first), unread list | Vic | built |
 | Favorites and Notes Service | Pin users, private notes | Vic | built |
 | Match Service | Calls the engine, applies the mutual rule, builds the cards | Vic and Tae | built |
-| Data Access Layer | Prisma repositories, the only code that talks to PostgreSQL | Chuan | schema, client and seed built; repositories for auth, messaging, favorites, notes and matching written by Vic as a proposal, profile and photos still to write |
+| Data Access Layer | Prisma repositories, the only code that talks to PostgreSQL | Chuan | built: schema, two migrations, client, seed, and repositories for auth, messaging, favorites, notes, matching, profiles and the photo key. The RustFS side of photos is Tae's |
 | Match Engine | Scores and ranks candidates, filters a search. No database | Tae | built |
 
 ## Rules of the design

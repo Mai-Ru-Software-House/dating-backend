@@ -32,7 +32,7 @@ The `api` container stops at start up without the first four.
 | `JWT_SECRET` | required | a long random string (a secret, in the infra `.env`) |
 | `CORS_ORIGINS` | required | comma separated list of app origins |
 | `RUSTFS_BUCKET` | required | for example `mairu-photos`. Tae creates the bucket and the RustFS set up (9 Oct) |
-| `NOMINATIM_URL` | required | `https://nominatim.openstreetmap.org` |
+| `NOMINATIM_URL` | required by the backend, set by the infra compose files with this default, so it is not needed in the infra `.env` | `https://nominatim.openstreetmap.org` |
 | `ACCESS_TOKEN_TTL_SECONDS` | optional | default `900` (use `60` on a test server for test LG09) |
 | `REFRESH_TOKEN_TTL_DAYS` | optional | default `30` |
 | `MATCH_ENGINE_TIMEOUT_MS` | optional | default `5000` |
@@ -62,7 +62,7 @@ Nothing. The backend pushes the candidates in each request (`docs/match-engine.m
 - Image name `ghcr.io/mai-ru-software-house/dating-backend`. Infra picks the tag with `BACKEND_IMAGE` (dev uses `:dev`).
 - This repo has a `Dockerfile` and a GitHub Actions workflow. Every push to `main` and `feat/**` builds an image tagged with the commit hash. Only `main` moves `:dev`, so Watchtower never follows a feature branch.
 - The server stops cleanly when Docker sends `SIGTERM` (it finishes the requests in progress and closes the database). It refuses a request body over 2 MiB.
-- On start the container runs `bun run db:deploy` (applies pending migrations), then the server. The schema owner (Chuan) and Tae should agree whether migrations run automatically like this, or only by hand.
+- On start the container runs `bun run db:deploy` (applies pending migrations), then the server. The database now has two migrations (the second replaced the gender `other` with `prefer_not_to_say` and made `users.photo_key` unique). The schema owner (Chuan) and Tae should agree whether migrations run automatically like this, or only by hand.
 - The generated Prisma client is committed in `src/generated`, so the build runs no `prisma generate`.
 
 ## Nginx
