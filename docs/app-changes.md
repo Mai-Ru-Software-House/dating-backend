@@ -1,6 +1,6 @@
 # What the app must change
 
-For Tee. Only row 8 needs an app change (and row 7 if the app really needs to edit notes); the other rows are information. The backend follows `docs/api-contract.md`. This page lists where the app (`dating-frontend`, `main` of 9 October 2026) differs from the contract and from the backend as built, so each change is clear. The routes marked "built" can be tried today (`GET /openapi` on a running backend lists them).
+For Tee. Only row 8 needs an app change; the other rows are information. The backend follows `docs/api-contract.md`. This page lists where the app (`dating-frontend`, `main` of 9 October 2026) differs from the contract and from the backend as built, so each change is clear. The routes marked "built" can be tried today (`GET /openapi` on a running backend lists them).
 
 ## App versus backend
 
@@ -12,7 +12,7 @@ For Tee. Only row 8 needs an app change (and row 7 if the app really needs to ed
 | 4 | Logout | `DELETE /sessions/current` with `{ refreshToken }` | The same. Without a body, all refresh tokens of the user are cancelled | built |
 | 5 | Expired token | Refreshes on `401 UNAUTHENTICATED` | The same. There is no `TOKEN_EXPIRED` code | built |
 | 6 | Cards in Find Matches | `CandidateCard` has no `username` | Every card has `username` (the match list shows it) | built |
-| 7 | Notes | `GET /notes?aboutUserId=`, `POST /notes`, `GET /notes/people` | All three exist. `PATCH` and `DELETE /notes/{noteId}` do not (not in the features); tell us if the app really needs them | built |
+| 7 | Notes | `GET /notes?aboutUserId=`, `POST /notes`, `GET /notes/people`, `PATCH` and `DELETE /notes/{noteId}` | All of them exist: `PATCH` and `DELETE /notes/{noteId}` (they answer `404 NOTE_NOT_FOUND` for a note that is not yours). A note and `lastNote` have `updatedAt`, `null` until the note is edited. The text limit is 500 characters, so the "/ 2000" counter in the design should say 500 | built |
 | 8 | Mark as read | Sends `{ lastReadMessageId }` | `PATCH /conversations/{userId}` takes `{ "isRead": true }` and marks every message from that user as read | built |
 | 9 | Search results | Shows what `GET /candidates` returns | Only users who also accept the searcher are returned (an empty search gives the same people as the recommendations) | built |
 | 10 | Paging recommendations | `limit` | `limit` and `offset`, `hasMore` in the answer. `offset + limit` is at most 200 | built |
@@ -29,7 +29,7 @@ For Tee. Only row 8 needs an app change (and row 7 if the app really needs to ed
 
 ## Errors the app should handle
 
-`INVALID_INPUT` (with `field`), `UNAUTHENTICATED` (refresh once, then Landing), `INVALID_CREDENTIALS` (stay on the login form), `USER_NOT_FOUND`, `MESSAGE_NOT_FOUND`, `PHOTO_NOT_FOUND`, `PLACE_NOT_FOUND`, `USERNAME_TAKEN`, `GEOCODER_UNAVAILABLE`, `MATCH_ENGINE_UNAVAILABLE` and `INTERNAL_ERROR`. Codes the app has but the backend does not use: `UPLOAD_NOT_FOUND` (the temporary upload is removed) and `NOTE_NOT_FOUND` (no note edit or delete yet).
+`INVALID_INPUT` (with `field`), `UNAUTHENTICATED` (refresh once, then Landing), `INVALID_CREDENTIALS` (stay on the login form), `USER_NOT_FOUND`, `MESSAGE_NOT_FOUND`, `PHOTO_NOT_FOUND`, `PLACE_NOT_FOUND`, `USERNAME_TAKEN`, `GEOCODER_UNAVAILABLE`, `MATCH_ENGINE_UNAVAILABLE` and `INTERNAL_ERROR`. `NOTE_NOT_FOUND` is used by the note edit and delete routes. The code the app has but the backend does not use yet is `UPLOAD_NOT_FOUND` (the temporary upload, Tae).
 
 ## What is saved
 
