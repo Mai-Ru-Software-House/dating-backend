@@ -6,34 +6,34 @@ This file is checked against the other repos: the app (`dating-frontend`, Tee), 
 
 ## Endpoint status
 
-- **built**: the route exists in this repo and has tests.
-- **built, repositories to review**: the route works on PostgreSQL. The repositories were written by Vic as a proposal for the Data Access Layer, and Chuan reviews them (`docs/data-access.md`).
-- **built, to review**: written by Vic for a service owned by someone else (Chuan reviews).
+- **built**: the route exists in this repo, has tests and works on PostgreSQL.
 - **not built**: agreed on paper only. The owner writes it.
 
 | Endpoint | Owner | Status | Needed by |
 | -------- | ----- | ------ | --------- |
 | `GET /health` | Vic | built | Infra health check |
 | `GET /places` | Vic | built | Create Profile, Edit Profile |
-| `POST /sessions` | Chuan | built, to review | Login |
-| `POST /sessions/refresh` | Chuan | built, to review | Login (keeps the user logged in) |
-| `DELETE /sessions/current` | Chuan | built, to review | Logout |
-| `GET /usernames/{username}` | Chuan | not built | Create Profile |
-| `POST /users` | Chuan | not built | Create Profile |
-| `GET /users/me` | Chuan | not built | App start up, Edit Profile |
-| `PATCH /users/me` | Chuan | not built | Edit Profile |
-| `GET /users/{userId}` | Chuan | not built | Find Matches (candidate profile) |
+| `POST /sessions` | Chuan | built | Login |
+| `POST /sessions/refresh` | Chuan | built | Login (keeps the user logged in) |
+| `DELETE /sessions/current` | Chuan | built | Logout |
+| `GET /usernames/{username}` | Chuan | built | Create Profile |
+| `POST /users` | Chuan | built (needs Tae's photo upload to finish, see the note below the table) | Create Profile |
+| `GET /users/me` | Chuan | built | App start up, Edit Profile |
+| `PATCH /users/me` | Chuan | built | Edit Profile |
+| `GET /users/{userId}` | Chuan | built | Find Matches (candidate profile) |
 | `POST /photo-uploads` | Tae | not built | Create Profile (the photo step) |
 | `DELETE /photo-uploads/{uploadId}` | Tae | not built | Create Profile (the user picks another photo) |
 | `PUT /users/me/photo` | Tae | not built | Edit Profile |
 | `GET /photos/{photoId}` | Tae | not built | every screen that shows a photo |
 | `GET /recommendations` | Vic and Tae | built (reads profiles from PostgreSQL) | Find Matches |
 | `GET /candidates` | Vic and Tae | built (reads profiles from PostgreSQL) | Find Matches (search) |
-| `GET /conversations`, `GET /conversations/{userId}/messages`, `POST /conversations/{userId}/messages`, `PATCH /conversations/{userId}`, `POST /messages/{messageId}/replies`, `GET /messages?unread=true` | Vic | built, repositories to review | Chat list, conversation, send, reply, unread list |
-| `GET /favorites`, `PUT /favorites/{userId}`, `DELETE /favorites/{userId}` | Vic | built, repositories to review | Add Favorite |
-| `GET /notes`, `POST /notes`, `GET /notes/people`, `GET /users/{userId}/notes`, `POST /users/{userId}/notes` | Vic | built, repositories to review | Record and view notes (the `/users/{userId}/notes` paths are the ones in the functional test plan) |
+| `GET /conversations`, `GET /conversations/{userId}/messages`, `POST /conversations/{userId}/messages`, `PATCH /conversations/{userId}`, `POST /messages/{messageId}/replies`, `GET /messages?unread=true` | Vic | built | Chat list, conversation, send, reply, unread list |
+| `GET /favorites`, `PUT /favorites/{userId}`, `DELETE /favorites/{userId}` | Vic | built | Add Favorite |
+| `GET /notes`, `POST /notes`, `GET /notes/people`, `GET /users/{userId}/notes`, `POST /users/{userId}/notes` | Vic | built | Record and view notes (the `/users/{userId}/notes` paths are the ones in the functional test plan) |
 | `PATCH /notes/{noteId}`, `DELETE /notes/{noteId}` | Vic | not built (the app asks for them, not in the features) | Edit and delete a note |
 | `POST /internal/v1/recommendations`, `POST /internal/v1/candidates/search` (Match Engine) | Tae (engine), Vic (caller) | built (caller), follows the engine | Match Service |
+
+The photo routes are Tae's and not built yet. Sign up (`POST /users`) is built, but it takes the photo from a temporary upload (`photoUploadId`), and the running server has no upload store until Tae's RustFS version exists. Until then every sign up answers `400` with `field` `photoUploadId`. The seed users can log in.
 
 ## Shared rules
 
@@ -91,7 +91,7 @@ A user shown in Find Matches. The fields of `UserSummary`, plus:
 | ----- | ---- | ----- |
 | `username` | string | The unique username (shown in the match list, test FM01) |
 | `age` | integer | In whole years, computed from the date of birth in UTC. The date of birth is never sent |
-| `gender` | string | A gender code (the list is an open item, see `docs/decisions.md`) |
+| `gender` | string | A gender code: `female`, `male`, `non_binary` or `prefer_not_to_say` |
 | `placeName` | string or null | "province, district" in English, for example "Bangkok, Pathum Wan". Only the province if no district is known, null if neither |
 | `distanceKm` | integer | Whole km, never below 1, so an exact location cannot be worked out |
 | `matchScore` | integer | 0 to 100. Only in recommendations and the candidate profile |
@@ -158,7 +158,7 @@ Notes: `timestamp` is set by the server, UTC ISO 8601.
 
 ### POST /sessions
 
-Status: built, to review (Chuan). Session: **none**.
+Status: built (Chuan). Session: **none**.
 
 Body: `{ "username": "mai_ru01", "password": "********" }`. Both are required. The username is read in any letter case.
 
@@ -173,7 +173,7 @@ Notes: the access token is a JWT signed with `JWT_SECRET` and is checked by sign
 
 ### POST /sessions/refresh
 
-Status: built, to review (Chuan). Session: **none** (the refresh token is the proof).
+Status: built (Chuan). Session: **none** (the refresh token is the proof).
 
 Body: `{ "refreshToken": "r_8c1f2e..." }` (required). Response `200`: a new `{ accessToken, refreshToken }`. The refresh token is rotated: the old one stops working, and two requests with the same token cannot both succeed.
 
@@ -184,35 +184,35 @@ Body: `{ "refreshToken": "r_8c1f2e..." }` (required). Response `200`: a new `{ a
 
 ### DELETE /sessions/current
 
-Status: built, to review (Chuan). Session: **required**.
+Status: built (Chuan). Session: **required**.
 
 Body (optional): `{ "refreshToken": "r_8c1f2e..." }`. With a body, that refresh token is cancelled (the app sends it). Without a body, every refresh token of the user is cancelled. A token that belongs to someone else is ignored. Response `204`, no body. The access token still works until it expires.
 
 ### GET /usernames/{username}
 
-Status: not built (Chuan). Session: **none**.
+Status: built (Chuan). Session: **none**.
 
 Response `200`: `{ "isAvailable": true }`. A name that is taken is not an error: `isAvailable` is false. `400 INVALID_INPUT` (`field` `username`) when the format is wrong (not 4 to 20 letters, digits and underscore). The check is case insensitive. The same check runs at `POST /users`, which answers `409 USERNAME_TAKEN` if someone took the name in between.
 
 ### POST /users
 
-Status: not built (Chuan, with the photo functions by Tae and the Location Service by Vic). Session: **none**.
+Status: built (Chuan, with the Location Service by Vic). The photo part waits for Tae: until his upload store exists, the server answers `400` with `field` `photoUploadId`. Session: **none**.
 
 Body: JSON. The photo was uploaded before with `POST /photo-uploads`; the body carries its `photoUploadId`.
 
 | Field | Type | Rules |
 | ----- | ---- | ----- |
 | `username` | string | 4 to 20 letters, digits and underscore. Unique, case insensitive. Cannot be changed later |
-| `password` | string | At least 8 characters with a letter and a digit. One value; the app checks the confirmation |
-| `displayName` | string | Not empty. Not unique |
-| `dateOfBirth` | string | `YYYY-MM-DD`, a real date, not in the future, age at least 18 (counted from the UTC date) |
-| `gender` | string | A gender code from the list |
+| `password` | string | At least 8 characters with a letter and a digit. At most 1000 characters (the limit of login). One value; the app checks the confirmation |
+| `displayName` | string | Spaces at both ends are removed. 1 to 50 characters. Not unique |
+| `dateOfBirth` | string | `YYYY-MM-DD`, a real date, not in the future, age at least 18 (counted from the UTC date), year 1900 or later |
+| `gender` | string | A gender code: `female`, `male`, `non_binary` or `prefer_not_to_say` |
 | `location` | object | `{ lat, lon }`, `lat` -90 to 90, `lon` -180 to 180 |
 | `photoUploadId` | string | Required. The `uploadId` of a photo uploaded less than an hour ago and not used yet |
-| `preferences.minAge` | integer | At least 18, not above `maxAge` |
-| `preferences.maxAge` | integer | |
-| `preferences.targetGenders` | list of strings | One or more gender codes |
-| `preferences.radiusKm` | number | Above 0 |
+| `preferences.minAge` | integer | Whole number from 18 to 120, not above `maxAge` |
+| `preferences.maxAge` | integer | Whole number from 18 to 120 |
+| `preferences.targetGenders` | list of strings | One or more gender codes. A repeated code counts once. Stored sorted A to Z |
+| `preferences.radiusKm` | integer | Whole km from 1 to 20000 |
 
 Response `201`: `{ "accessToken", "refreshToken", "profile": <OwnProfile> }`.
 
@@ -225,17 +225,17 @@ Notes: the server builds `placeName` with the Location Service once and stores i
 
 ### GET /users/me
 
-Status: not built (Chuan). Session: **required**. Response `200`: the `OwnProfile`. The app calls it at start up: `200` goes to Home, `401` goes to Landing.
+Status: built (Chuan). Session: **required**. Response `200`: the `OwnProfile`. `401 UNAUTHENTICATED` also when the user no longer exists. The app calls it at start up: `200` goes to Home, `401` goes to Landing.
 
 ### PATCH /users/me
 
-Status: not built (Chuan). Session: **required**.
+Status: built (Chuan). Session: **required**.
 
 Body: any of `displayName`, `dateOfBirth`, `gender`, `location` and `preferences` (sent whole). Each has the rules of `POST /users`. `username` cannot be changed and sending it is a `400`. The photo has its own endpoint. Response `200`: the updated `OwnProfile`. A new `location` gives a new `placeName`; if the lookup fails the old name is cleared.
 
 ### GET /users/{userId}
 
-Status: not built (Chuan). Session: **required**.
+Status: built (Chuan). Session: **required**.
 
 Response `200`: a `CandidateCard` (with `matchScore`), plus:
 
@@ -244,7 +244,7 @@ Response `200`: a `CandidateCard` (with `matchScore`), plus:
 | `lookingFor` | object | The user's own preferences: `{ targetGenders, minAge, maxAge, radiusKm }` |
 | `isFavorite` | boolean | For the Add Favorite button (from the Favorites service) |
 
-`matchScore` here comes from one engine request with only this user in the pool. `distanceKm` is measured from the logged in user's saved location. The response never has a date of birth, an exact location, favorites or notes. `404 USER_NOT_FOUND` for an unknown ID, or an ID that is not a UUID.
+`matchScore` here comes from one engine request with only this user in the pool. It is `0`, without calling the engine, when the two users do not fit each other both ways (age, gender and distance), or when the user looks at their own profile. `distanceKm` is measured from the logged in user's saved location. The response never has a date of birth, an exact location, favorites or notes. `404 USER_NOT_FOUND` for an unknown ID, or an ID that is not a UUID.
 
 ### POST /photo-uploads
 
@@ -266,7 +266,7 @@ Status: not built (Tae). Session: **none**. The header `X-Delete-Token` carries 
 
 ### PUT /users/me/photo
 
-Status: not built (Tae, with Chuan for the link to the profile). Session: **required**.
+Status: not built (Tae). Chuan's database function that swaps the photo key is built. Session: **required**.
 
 Body: `multipart/form-data`, one file part named `photo`, with the same rules as `POST /photo-uploads`. Response `200`: `{ "photoUrl": "/api/v1/photos/{photoId}" }`. The new photo replaces the old one, and the old object is deleted from RustFS only after the new one is saved. The object key is `profile-photos/<photoId>.<extension>`.
 
@@ -786,7 +786,7 @@ Response `200`, nearest first: `{ "candidates": [{ "userId": "0194a1b3-...", "di
 - **Search:** the same pool, so a search with empty fields returns the same people as the recommendations (test FM12: bob and chai, not gun). A search point other than the user's own changes only the distance and the radius check of the search, not the candidate's own radius.
 - **Paging:** the backend asks for `offset + limit + 1` results (at most 200) and keeps the slice. The extra result tells `hasMore`.
 - **Privacy:** the engine gets `age` (whole years, computed in UTC), `gender` and exact coordinates, but never the date of birth, name, username or photo. Cards are built by the backend from its own data.
-- **Gender values:** plain strings compared for equality, so the codes from the `genders` table pass through (`male`, `female`, `non_binary`, `other`).
+- **Gender values:** plain strings compared for equality, so the codes from the `genders` table pass through (`female`, `male`, `non_binary`, `prefer_not_to_say`).
 
 ### Errors
 
@@ -798,6 +798,7 @@ The routes `GET /internal/v1/match-profiles/{userId}` and `GET /internal/v1/matc
 
 ## Change log
 
+- 9 October 2026 (Vic, after Chuan's pull requests 4 and 5): Auth, sign up, the own profile, the candidate profile and the username check are built. Migration 2 replaced the gender `other` with `prefer_not_to_say` and made `users.photo_key` unique. The rules of `POST /users` and `PATCH /users/me` now state the limits the code enforces (name 1 to 50 characters, password up to 1000, ages 18 to 120, radius 1 to 20000 whole km). Statuses "to review" are gone. The photo routes are still Tae's and not built, so sign up cannot finish on a running server yet.
 - 9 October 2026 (Vic, second pass after talking to Tae and Tee): the photo flow follows the app (`POST /photo-uploads`, `DELETE /photo-uploads/{uploadId}`, `photoUploadId` in the JSON sign up, `PUT /users/me/photo`); `bio` and `interests` are dropped (team decision); search stays one way in the engine, so the backend keeps its mutual pre-filter.
 - 9 October 2026 (Vic): checked against the app, the engine, the infra repo and the schema. Photos are sent as `photoUrl` (a path), as the app expects. `TOKEN_EXPIRED` is removed: an expired access token answers `UNAUTHENTICATED`. `DELETE /sessions/current` takes an optional `{ refreshToken }`. The rules of the functional test plan (A1 to A8) are written in as decided. Statuses now say built or not built. Auth, places, messaging, favorites, notes and match are built; profile and photos are not.
 - 8 October 2026 (Vic): Match Service built. The engine packets follow the engine as built (`candidates`, `matchScore`, `distanceKm`). Cards have `username`. Search is mutual. `GET /notes/people` and `/users/{userId}/notes` added. The internal server is dropped.

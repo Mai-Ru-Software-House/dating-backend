@@ -1,6 +1,6 @@
 # Decisions
 
-What the team has decided about the backend, and what is still open. Check this page before making a design choice. If a task needs an open question answered, ask the owner instead of guessing. Last cleaned on 9 October 2026.
+What the team has decided about the backend, and what is still open. Check this page before making a design choice. If a task needs an open question answered, ask the owner instead of guessing. Last cleaned on 9 October 2026, after Chuan's Profile Service (PR #5).
 
 ## Decided
 
@@ -27,27 +27,27 @@ What the team has decided about the backend, and what is still open. Check this 
 | Server | The server refuses a request body over 2 MiB (413, before any route), stops cleanly on `SIGTERM` and `SIGINT` (finishes requests, closes the database, exits 0), and CORS allows only the origins in `CORS_ORIGINS` | Vic (9 Oct) |
 | File storage | Tae sets up RustFS: the bucket, its access keys and the upload clean up. The backend only needs `RUSTFS_ENDPOINT`, `RUSTFS_ACCESS_KEY`, `RUSTFS_SECRET_KEY` and `RUSTFS_BUCKET` | Tae (9 Oct) |
 | Docs | The docs in `docs/` are public (the repos are public): no secrets, no personal paths, first names only. Notes that only live on one machine are in `local-docs/` (git ignored) | Vic (9 Oct) |
+| Gender values | Four values: `female`, `male`, `non_binary`, `prefer_not_to_say`. Migration 2 replaced `other` with `prefer_not_to_say`, as the app has it | Chuan (9 Oct) |
+| Photo key | `users.photo_key` is `profile-photos/<photoId>.<extension>`, `photoId` is a UUID and the extension is png, jpg, jpeg or webp. The column has a unique index, so `GET /photos/{photoId}` finds one user | Chuan, Tae (9 Oct) |
+| Profile Service | Sign up, username check, own profile and candidate profile are built (Chuan). Every rule is checked in the service (`src/services/profile/profileRules.ts`) and a broken rule names its field. The username cannot be changed. `PATCH /users/me` takes any of `displayName`, `dateOfBirth`, `gender`, `location` and `preferences`; there is no password change in v1. A new location gets a new place name. The candidate profile shows `matchScore` (0 when the two users do not fit both ways), `lookingFor` and `isFavorite` | Chuan (9 Oct) |
+| Repositories | Vic wrote the Prisma repositories for auth, messaging, favorites, notes, the user reader and the match profile reader, and Chuan merged them (PR #4). Chuan wrote the profile and photo repositories (PR #5). One behaviour test suite runs on the in-memory and the Prisma versions | Vic, Chuan (9 Oct) |
 
 ## Open
 
 | Question | Owner | Proposal |
 | --- | --- | --- |
-| Gender values: the app has `prefer_not_to_say`, the `genders` table has `other` | Chuan, Tee | Keep the app's four values (`female`, `male`, `non_binary`, `prefer_not_to_say`) and add a migration; until then the backend accepts any text and the engine matches by equality |
-| The photo key format and a unique index on `users.photo_key`, so `GET /photos/{photoId}` can find the user | Chuan, Tae | Key `profile-photos/<photoId>.<extension>`, `photoId` is the file name without the extension |
-| The Prisma repositories: Vic wrote them as a proposal (auth, messaging, favorites, notes, user reader, match profile reader). Profile and photos are still to write | Chuan | Chuan reviews and keeps, changes or moves them into the Data Access Layer; the behaviour tests in `test/repositories/contracts.ts` run against both the in-memory and the Prisma versions |
 | Migrations: automatic when the container starts, or by hand only | Chuan, Tae | Automatic on start in dev; by hand in production |
 | Where the temporary photo uploads are kept and how unused ones are removed after one hour | Tae, Chuan | No table: object `uploads/<uploadId>.<extension>` in RustFS, `deleteToken` = HMAC of the `uploadId` with `JWT_SECRET`, `expiresAt` from the object's time, a RustFS lifecycle rule or a sweep deletes old uploads. A `photo_uploads` table is the alternative |
-| Edit Profile: which fields can change, password change | Chuan, Tee | Everything except `username` and the photo (own endpoint); no password change in v1 |
 | Edit and delete a note (`PATCH` and `DELETE /notes/{noteId}`) | Vic, Tee | Not in the features. Build only if Tee needs them; the schema already has `updated_at` |
 | Photo resize | Tae | Store the photo as uploaded (square, at most 1 MB), no resize in v1 |
-| The place name comment in the schema says "District, province" | Chuan | Change the comment to "province, district" (and the seed "Area" labels if wanted) |
-| Nginx: `client_max_body_size` (default 1 MB refuses a sign up with a 1 MB photo), HTTPS in production | Tae | `client_max_body_size 2m;` in both files |
+| Nginx: `client_max_body_size` (default 1 MB refuses a sign up with a 1 MB photo), HTTPS in production | Tae | `client_max_body_size 2m;` in both files. Branch `feat/api-env-and-body-limit` in `dating-infra` has it, with the backend environment variables, for Tae to review |
 | Engine docs and CI: its `BACKEND_REQUIREMENTS.md` has an empty list in section 3 and mentions Swipes, Blocks and bios; its CI moves `:dev` from `feat/**` branches | Tae | Only recorded in `docs/match-engine.md`, "Answers from the engine". No action needed from us |
 | Real time messages (WebSocket) | Vic | Later. The Messaging Service already has a notifier hook that does nothing |
 | Per client request limits (`X-Real-IP`), a request id in logs, graceful shutdown | Vic | Stretch goals after the required features |
 
 ## History (replaced decisions)
 
+- Gender `other` (first migration): replaced by `prefer_not_to_say` (9 Oct, migration 2), the app's value.
 - Match Engine pulls its data through an internal server on port 3001 with `X-Internal-Key` (5 Oct): replaced by push (8 Oct).
 - Place name "district, province" (5 Oct): replaced by "province, district" (8 Oct), as in the test plan and the app.
 - Photo by `photoId` that the app builds into a path (5 Oct): replaced by `photoUrl` (9 Oct).

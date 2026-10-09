@@ -16,11 +16,11 @@ Team: Mai Ru (project SEN-201, Online Dating System). Source: the Mai Ru work as
 | Mobile app (all pages) | Tee |
 | Web server framework (Elysia setup, config, CORS, session check) | Vic |
 | REST API layer and the API contract | Vic |
-| Auth Service (login, refresh, logout, password hashing) | Chuan (first version written by Vic, to review) |
+| Auth Service (login, refresh, logout, password hashing) | Chuan (first version written by Vic, merged by Chuan) |
 | Profile Service | Chuan |
 | Photo functions (module `src/services/photo/`, not a separate service) | Tae |
 | Match Service (calls the engine, builds the cards) | Vic and Tae |
-| Match profile reader (Prisma) | Chuan (first version written by Vic, to review) |
+| Match profile reader (Prisma) | Chuan (first version written by Vic, merged by Chuan) |
 | Location Service (Nominatim) | Vic |
 | Messaging Service | Vic |
 | Favorites and Notes Service | Vic |

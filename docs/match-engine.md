@@ -27,7 +27,7 @@ The engine also supports a pull mode (it calls the backend for the profiles). Th
 
 - **Recommendations:** the logged in user (age, gender, coordinates, target preferences) and a pool of candidates in one request, with `limit = offset + limit + 1`.
 - **Search:** the criteria (`ageMin`, `ageMax`, `gender`, `radiusKm`, `location`, `limit`) and the pool.
-- **Never sent:** date of birth, name, username, photo. Ages are whole years computed in UTC. Gender values are plain strings the engine compares for equality (`male`, `female`, `non_binary`, `other`).
+- **Never sent:** date of birth, name, username, photo. Ages are whole years computed in UTC. Gender values are plain strings the engine compares for equality (`female`, `male`, `non_binary`, `prefer_not_to_say`).
 
 ## Who does what in the matching rules
 

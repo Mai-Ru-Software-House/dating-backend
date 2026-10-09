@@ -1,8 +1,8 @@
 # Data access: what the services need from the database layer
 
-For Chuan (Data Access Layer and database). The services never write SQL and never import the Prisma client. Each service declares an **interface** for what it needs, and the Prisma implementation lives in `src/data/` on top of `prisma/schema.prisma`. Vic wrote the implementations below as a **proposal** so the app works on PostgreSQL today; Chuan reviews them and keeps, changes or moves them into the Data Access Layer. Checked on 9 October 2026 against the schema of PR #3.
+For Chuan (Data Access Layer and database). The services never write SQL and never import the Prisma client. Each service declares an **interface** for what it needs, and the Prisma implementation lives in `src/data/` on top of `prisma/schema.prisma`. Vic wrote the first group of implementations so the app works on PostgreSQL, and Chuan merged them (PR #4). Chuan wrote the Profile and photo repositories (PR #5). Checked on 9 October 2026 against `main` after both pull requests.
 
-## Written (proposals, to review)
+## Written
 
 | Interface | Prisma version | What it does |
 | --------- | -------------- | ------------ |
@@ -12,10 +12,12 @@ For Chuan (Data Access Layer and database). The services never write SQL and nev
 | `UserReader` (same file) | `createPrismaUserReader` in `src/data/prismaMessageRepository.ts` | `{ userId, displayName, photoUrl }` for each user that exists |
 | `FavoritesRepository` (`src/services/favoritesNotes/favoritesNotesRepository.ts`) | `createPrismaFavoritesRepository` in `src/data/prismaFavoritesNotesRepository.ts` | Add (keeps the first `createdAt`), remove, list newest first. It also gives the favorite IDs for the chat list order |
 | `NotesRepository` (same file) | `createPrismaNotesRepository` in the same file | Insert, a user's notes about one person newest first, the people list with the count and the newest note |
+| `ProfileRepository` (`src/services/profile/profileRepository.ts`) | `src/data/prismaProfileRepository.ts` (Chuan) | Username check, the genders list, find a profile, update a profile (changes only the fields sent, the target genders replaced as a whole) and create a profile. Create writes `users`, the password row in `user_auth_methods` and `user_target_genders` in one transaction. A username that is taken (unique index `users_username_key`) and a photo key that is taken (`users_photo_key_key`) come back as answers, not errors (`src/data/prismaErrors.ts`) |
+| `ProfilePhotoRepository` (`src/services/photo/profilePhotoRepository.ts`) | `src/data/prismaProfilePhotoRepository.ts` (Chuan, for Tae) | Find the photo key of a photo ID (four exact keys, one per allowed extension, so the unique index is used) and replace a user's photo key in one locked step, returning the old key so the old object is deleted only after the commit |
 
 `createApp` uses these by default, so a running backend reads and writes PostgreSQL. The in-memory versions stay as the reference and for unit tests.
 
-How they were checked: one set of behaviour tests (`test/repositories/contracts.ts`) runs against **both** the in-memory and the Prisma versions, so they must behave the same: 26 behaviour tests, run once on each version (the Prisma runs use a real PostgreSQL 18), plus the seed users through the real routes (the unread list of alice shows bob's three messages, the chat list puts chai first as a favorite, the seeded note about chai is returned).
+How they were checked: one set of behaviour tests (`test/repositories/contracts.ts`) runs against **both** the in-memory and the Prisma versions, so they must behave the same: 45 behaviour tests, run once on each version (the Prisma runs use a real PostgreSQL 18), plus the seed users through the real routes (the unread list of alice shows bob's three messages, the chat list puts chai first as a favorite, the seeded note about chai is returned).
 
 ## Rules every repository follows
 
@@ -29,19 +31,18 @@ How they were checked: one set of behaviour tests (`test/repositories/contracts.
 
 ## Notes for the schema (Chuan)
 
+- `users.photo_key` has a unique index since migration 2 (`users_photo_key_key`).
 - The two indexes on `messages` do not cover the query for one conversation in both directions ordered by `sent_at`. It runs on the `(sender_id, receiver_id, sent_at)` index for each direction. If it gets slow, add an index on `(receiver_id, sender_id, sent_at)` or store a sorted pair of user IDs.
 - The summary query uses `DISTINCT ON` over the chat partner; it reads all messages of one user. Fine for the project, worth an index on `(receiver_id, sent_at)` later.
 - `notes.body` allows 2000 characters, the service limits it to 500.
 
-## Still to write
+## Still open
 
-### Profile (Chuan)
+### Photos (Tae)
 
-Sign up writes `users` (with the `photo_key` of the claimed photo upload), `user_auth_methods` and `user_target_genders` in one transaction. A unique violation on `username` (Prisma code `P2002`) must become `409 USERNAME_TAKEN`. The username is stored in lowercase. `GET /users/{userId}`, `GET` and `PATCH /users/me` read and update the same rows.
+The database side is done: find the photo key by photo ID and replace a user's key (`ProfilePhotoRepository` above). What is left is on Tae's side: the RustFS version of the photo upload claimer that sign up calls (`src/services/profile/photoUploadClaimer.ts`: copy the upload to `profile-photos/<photoId>.<extension>`, then remove the upload after the user is saved, or delete the copy if saving failed), and serving `GET /photos/{photoId}`. Until the RustFS version exists the running app uses an in-memory claimer that knows no upload, so `POST /users` answers `400` on `photoUploadId`.
 
-### Photos (Tae with Chuan)
-
-The photo functions need: read `users.photo_key` by photo ID, and replace the photo of a user in one transaction (set the new `photo_key`, then delete the old object only after the commit). This needs a unique index on `users.photo_key` and the key format `profile-photos/<photoId>.<extension>`. The temporary uploads of the sign up flow (`POST /photo-uploads`) need no table in the proposal: the object `uploads/<uploadId>.<extension>` lives in RustFS, and the delete token is an HMAC of the upload ID. If you prefer a table, it needs `uploadId`, `objectKey`, `deleteTokenHash`, `expiresAt` and a used flag; tell Tae.
+The temporary uploads of the sign up flow (`POST /photo-uploads`) need no table in the current proposal: the object `uploads/<uploadId>.<extension>` lives in RustFS, and the delete token is an HMAC of the upload ID. If you prefer a table, it needs `uploadId`, `objectKey`, `deleteTokenHash`, `expiresAt` and a used flag; tell Tae. This is still in the Open list of `docs/decisions.md`.
 
 ## Test harness
 
