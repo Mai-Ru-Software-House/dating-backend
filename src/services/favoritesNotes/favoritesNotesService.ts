@@ -38,13 +38,15 @@ export interface NoteItem {
   aboutUserId: string;
   text: string;
   createdAt: string;
+  /** The time of the last edit, or null while the note was never edited. */
+  updatedAt: string | null;
 }
 
 /** One row of the Notes tab. */
 export interface NotePersonItem {
   user: UserSummary;
   noteCount: number;
-  lastNote: { noteId: string; text: string; createdAt: string };
+  lastNote: { noteId: string; text: string; createdAt: string; updatedAt: string | null };
 }
 
 /** Parts the service needs. `now` is replaceable in tests. */
@@ -105,6 +107,25 @@ export interface FavoritesNotesService {
    * @returns one row for each person the user wrote notes about, newest note first
    */
   listNotePeople(userId: string): Promise<{ people: NotePersonItem[] }>;
+
+  /**
+   * Change the text of one of the user's own notes.
+   * @param userId - the logged in user
+   * @param noteId - the note to change
+   * @param text - the new text, 1 to 500 characters after trimming
+   * @returns the changed note, with `updatedAt` set to the server time
+   * @throws ApiError 400 INVALID_INPUT (field `text`) when it is empty or too long
+   * @throws ApiError 404 NOTE_NOT_FOUND when the note does not exist or is not the user's
+   */
+  updateNote(userId: string, noteId: string, text: string): Promise<NoteItem>;
+
+  /**
+   * Delete one of the user's own notes.
+   * @param userId - the logged in user
+   * @param noteId - the note to delete
+   * @throws ApiError 404 NOTE_NOT_FOUND when the note does not exist or is not the user's
+   */
+  deleteNote(userId: string, noteId: string): Promise<void>;
 }
 
 function invalidInput(field: string, message: string): ApiError {
@@ -132,12 +153,24 @@ export function validateNoteText(text: string): string {
   return trimmed;
 }
 
+function noteNotFound(): ApiError {
+  return new ApiError(HTTP_NOT_FOUND, ERROR_CODES.noteNotFound, "That note does not exist.");
+}
+
+/** A note that was never edited has `updatedAt` equal to `createdAt`; the app sees null. */
+function editedAt(note: StoredNote): string | null {
+  return note.updatedAt.getTime() === note.createdAt.getTime()
+    ? null
+    : note.updatedAt.toISOString();
+}
+
 function toNoteItem(note: StoredNote): NoteItem {
   return {
     noteId: note.noteId,
     aboutUserId: note.subjectUserId,
     text: note.text,
     createdAt: note.createdAt.toISOString(),
+    updatedAt: editedAt(note),
   };
 }
 
@@ -226,11 +259,27 @@ export function createFavoritesNotesService(
               noteId: summary.lastNote.noteId,
               text: summary.lastNote.text,
               createdAt: summary.lastNote.createdAt.toISOString(),
+              updatedAt: editedAt(summary.lastNote),
             },
           });
         }
       }
       return { people };
+    },
+
+    async updateNote(userId, noteId, text) {
+      const trimmed = validateNoteText(text);
+      const stored = await notes.updateNoteText(noteId, userId, trimmed, now());
+      if (stored === null) {
+        throw noteNotFound();
+      }
+      return toNoteItem(stored);
+    },
+
+    async deleteNote(userId, noteId) {
+      if (!(await notes.deleteNote(noteId, userId))) {
+        throw noteNotFound();
+      }
     },
   };
 }

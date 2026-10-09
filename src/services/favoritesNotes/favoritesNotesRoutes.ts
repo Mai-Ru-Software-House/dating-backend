@@ -1,7 +1,7 @@
 /*
  * Favorites & Notes routes: GET /favorites, PUT and DELETE /favorites/{userId}, and the notes
- * routes GET and POST /notes, GET /notes/people, plus GET and POST /users/{userId}/notes (the
- * paths the functional test plan uses, NT07 and NT08). Every route needs a logged in user.
+ * routes GET and POST /notes, GET /notes/people, PATCH and DELETE /notes/{noteId}, plus GET and
+ * POST /users/{userId}/notes (the paths the functional test plan uses, NT07 and NT08). Every route needs a logged in user.
  * Handlers only check types with `t` and call the Favorites & Notes Service, which checks the
  * rules.
  */
@@ -30,9 +30,15 @@ const noteSchema = t.Object({
   aboutUserId: t.String(),
   text: t.String(),
   createdAt: t.String({ description: "UTC ISO 8601 ending in Z, set by the server" }),
+  updatedAt: t.Nullable(
+    t.String({
+      description: "Time of the last edit (UTC ISO 8601), null until the note is edited",
+    }),
+  ),
 });
 
 const userIdParams = t.Object({ userId: t.String() });
+const noteIdParams = t.Object({ noteId: t.String() });
 const noteTextBody = t.Object({
   text: t.String({ description: "1 to 500 characters after trimming" }),
 });
@@ -108,13 +114,40 @@ export function favoritesNotesRoutes(
             t.Object({
               user: userSummarySchema,
               noteCount: t.Integer(),
-              lastNote: t.Object({ noteId: t.String(), text: t.String(), createdAt: t.String() }),
+              lastNote: t.Object({
+                noteId: t.String(),
+                text: t.String(),
+                createdAt: t.String(),
+                updatedAt: t.Nullable(t.String()),
+              }),
             }),
           ),
         }),
       },
       detail: { summary: "People I wrote notes about, newest note first", tags: NOTES_TAGS },
     })
+    .patch(
+      "/notes/:noteId",
+      ({ session, params, body }) => service.updateNote(session.userId, params.noteId, body.text),
+      {
+        params: noteIdParams,
+        parse: JSON_ONLY,
+        body: noteTextBody,
+        response: { 200: noteSchema },
+        detail: { summary: "Change the text of one of my notes", tags: NOTES_TAGS },
+      },
+    )
+    .delete(
+      "/notes/:noteId",
+      async ({ session, params, status }) => {
+        await service.deleteNote(session.userId, params.noteId);
+        return status(HTTP_NO_CONTENT);
+      },
+      {
+        params: noteIdParams,
+        detail: { summary: "Delete one of my notes", tags: NOTES_TAGS },
+      },
+    )
     .get(
       "/users/:userId/notes",
       ({ session, params }) => service.listNotes(session.userId, params.userId),

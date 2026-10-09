@@ -295,3 +295,103 @@ describe("notes people list", () => {
     expect(people[1]?.user).toEqual(CHAI);
   });
 });
+
+describe("notes edit and delete", () => {
+  it("a new note has no updatedAt, an edited note has the time of the edit", async () => {
+    const { service, clock } = createTestFavoritesNotes();
+    const note = await service.createNote(ALICE_ID, BOB_ID, "First draft");
+    expect(note.updatedAt).toBeNull();
+
+    clock.advance(ONE_MINUTE_MS);
+    const edited = await service.updateNote(ALICE_ID, note.noteId, "  Second draft  ");
+    expect(edited).toEqual({
+      ...note,
+      text: "Second draft",
+      updatedAt: new Date(new Date(START_TIME).getTime() + ONE_MINUTE_MS).toISOString(),
+    });
+    expect(edited.updatedAt).toMatch(UTC_ISO_PATTERN);
+    expect((await service.listNotes(ALICE_ID, BOB_ID)).notes).toEqual([edited]);
+  });
+
+  it("checks the new text like a new note: trimmed, 1 to 500 characters, an emoji counts as one", async () => {
+    const { service } = createTestFavoritesNotes();
+    const note = await service.createNote(ALICE_ID, BOB_ID, "Hello");
+    for (const text of ["", "   ", "a".repeat(MAX_NOTE_LENGTH + 1)]) {
+      await expectApiError(
+        service.updateNote(ALICE_ID, note.noteId, text),
+        HTTP_BAD_REQUEST,
+        "INVALID_INPUT",
+        "text",
+      );
+    }
+    const longest = "😀".repeat(MAX_NOTE_LENGTH);
+    expect((await service.updateNote(ALICE_ID, note.noteId, longest)).text).toBe(longest);
+    expect((await service.listNotes(ALICE_ID, BOB_ID)).notes[0]?.text).toBe(longest);
+  });
+
+  it("keeps the order of the list when an older note is edited", async () => {
+    const { service, clock } = createTestFavoritesNotes();
+    const first = await service.createNote(ALICE_ID, BOB_ID, "First");
+    clock.advance(ONE_MINUTE_MS);
+    await service.createNote(ALICE_ID, BOB_ID, "Second");
+    clock.advance(ONE_MINUTE_MS);
+    await service.updateNote(ALICE_ID, first.noteId, "First, edited");
+
+    const texts = (await service.listNotes(ALICE_ID, BOB_ID)).notes.map((note) => note.text);
+    expect(texts).toEqual(["Second", "First, edited"]);
+  });
+
+  it("answers 404 NOTE_NOT_FOUND for an unknown note and for the note of someone else", async () => {
+    const { service } = createTestFavoritesNotes();
+    const note = await service.createNote(ALICE_ID, BOB_ID, "Private");
+
+    await expectApiError(
+      service.updateNote(ALICE_ID, "not_999999", "x"),
+      HTTP_NOT_FOUND,
+      "NOTE_NOT_FOUND",
+    );
+    await expectApiError(
+      service.updateNote(BOB_ID, note.noteId, "Bob changes it"),
+      HTTP_NOT_FOUND,
+      "NOTE_NOT_FOUND",
+    );
+    await expectApiError(service.deleteNote(BOB_ID, note.noteId), HTTP_NOT_FOUND, "NOTE_NOT_FOUND");
+    expect((await service.listNotes(ALICE_ID, BOB_ID)).notes[0]?.text).toBe("Private");
+  });
+
+  it("deletes a note, and a second delete is 404", async () => {
+    const { service } = createTestFavoritesNotes();
+    const note = await service.createNote(ALICE_ID, BOB_ID, "Short lived");
+    await service.deleteNote(ALICE_ID, note.noteId);
+
+    expect((await service.listNotes(ALICE_ID, BOB_ID)).notes).toEqual([]);
+    expect((await service.listNotePeople(ALICE_ID)).people.map((p) => p.user.userId)).toEqual([
+      CHAI_ID,
+    ]);
+    await expectApiError(
+      service.deleteNote(ALICE_ID, note.noteId),
+      HTTP_NOT_FOUND,
+      "NOTE_NOT_FOUND",
+    );
+  });
+
+  it("gives a new note an ID that no earlier note had, even after a delete", async () => {
+    const { service } = createTestFavoritesNotes();
+    const first = await service.createNote(ALICE_ID, BOB_ID, "One");
+    await service.deleteNote(ALICE_ID, first.noteId);
+    const second = await service.createNote(ALICE_ID, BOB_ID, "Two");
+    expect(second.noteId).not.toBe(first.noteId);
+  });
+
+  it("shows the edited text and updatedAt in the people list", async () => {
+    const { service, clock } = createTestFavoritesNotes();
+    const seeded = (await service.listNotePeople(ALICE_ID)).people[0]?.lastNote;
+    expect(seeded?.updatedAt).toBeNull();
+
+    clock.advance(ONE_MINUTE_MS);
+    await service.updateNote(ALICE_ID, seeded?.noteId ?? "", "Met at a cafe in Ari, again.");
+    const { people } = await service.listNotePeople(ALICE_ID);
+    expect(people[0]?.lastNote.text).toBe("Met at a cafe in Ari, again.");
+    expect(people[0]?.lastNote.updatedAt).toMatch(UTC_ISO_PATTERN);
+  });
+});

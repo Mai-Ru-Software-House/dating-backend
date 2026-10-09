@@ -19,6 +19,8 @@ export interface StoredNote {
   subjectUserId: string;
   text: string;
   createdAt: Date;
+  /** Equal to `createdAt` until the note is edited. */
+  updatedAt: Date;
 }
 
 /** The data needed to store a new note. The repository creates the ID. */
@@ -86,4 +88,29 @@ export interface NotesRepository {
    *   note first
    */
   listNotePeople(authorId: string): Promise<NotePersonSummary[]>;
+
+  /**
+   * Change the text of a note. Only the author can change a note.
+   * @param noteId - the note to change
+   * @param authorId - the logged in user
+   * @param text - the new text, already checked
+   * @param updatedAt - the time of the change
+   * @returns the changed note, or null when the note does not exist, is not the author's, or
+   *   `noteId` is not a note ID
+   */
+  updateNoteText(
+    noteId: string,
+    authorId: string,
+    text: string,
+    updatedAt: Date,
+  ): Promise<StoredNote | null>;
+
+  /**
+   * Delete a note. Only the author can delete a note.
+   * @param noteId - the note to delete
+   * @param authorId - the logged in user
+   * @returns true when the note was deleted, false when it does not exist, is not the author's,
+   *   or `noteId` is not a note ID
+   */
+  deleteNote(noteId: string, authorId: string): Promise<boolean>;
 }

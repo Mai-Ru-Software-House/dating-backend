@@ -23,6 +23,7 @@ const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
 const HTTP_NOT_FOUND = 404;
 const MAX_NOTE_LENGTH = 500;
+const ONE_MINUTE_MS = 60_000;
 
 const TOKENS: Record<string, string> = { "alice-token": ALICE_ID, "bob-token": BOB_ID };
 const fakeValidator: SessionValidator = async (token) => {
@@ -31,7 +32,7 @@ const fakeValidator: SessionValidator = async (token) => {
 };
 
 function setup() {
-  const { service } = createTestFavoritesNotes();
+  const { service, clock } = createTestFavoritesNotes();
   const app = createApp(testConfig, {
     favoritesNotesService: service,
     sessionValidator: fakeValidator,
@@ -55,7 +56,7 @@ function setup() {
     const text = await response.text();
     return { status: response.status, body: text === "" ? undefined : JSON.parse(text) };
   }
-  return { call };
+  return { call, clock };
 }
 
 describe("favorites routes", () => {
@@ -136,7 +137,9 @@ describe("notes routes", () => {
       "createdAt",
       "noteId",
       "text",
+      "updatedAt",
     ]);
+    expect(created.body.updatedAt).toBeNull();
     const list = await call("GET", `/api/v1/notes?aboutUserId=${BOB_ID}`, "alice-token");
     expect(list.status).toBe(HTTP_OK);
     expect(list.body.notes).toEqual([created.body]);
@@ -243,5 +246,91 @@ describe("test plan paths /users/{userId}/notes", () => {
     expect(forBob.body).toEqual({ notes: [] });
     const peopleForBob = await call("GET", "/api/v1/notes/people", "bob-token");
     expect(peopleForBob.body).toEqual({ people: [] });
+  });
+});
+
+describe("note edit and delete routes", () => {
+  async function createdNote(call: ReturnType<typeof setup>["call"]) {
+    const created = await call("POST", "/api/v1/notes", "alice-token", {
+      aboutUserId: BOB_ID,
+      text: "Likes jazz",
+    });
+    return created.body as { noteId: string; createdAt: string };
+  }
+
+  it("answer 401 without a token", async () => {
+    const { call } = setup();
+    expect((await call("PATCH", "/api/v1/notes/1", undefined, { text: "Hi" })).status).toBe(
+      HTTP_UNAUTHORIZED,
+    );
+    expect((await call("DELETE", "/api/v1/notes/1")).status).toBe(HTTP_UNAUTHORIZED);
+  });
+
+  it("PATCH /notes/{noteId} returns 200 with the new text and an updatedAt", async () => {
+    const { call, clock } = setup();
+    const note = await createdNote(call);
+    clock.advance(ONE_MINUTE_MS);
+    const { status, body } = await call("PATCH", `/api/v1/notes/${note.noteId}`, "alice-token", {
+      text: "  Likes jazz and tea  ",
+    });
+    expect(status).toBe(HTTP_OK);
+    expect(body).toMatchObject({
+      noteId: note.noteId,
+      aboutUserId: BOB_ID,
+      text: "Likes jazz and tea",
+      createdAt: note.createdAt,
+    });
+    expect(typeof body.updatedAt).toBe("string");
+    const list = await call("GET", `/api/v1/notes?aboutUserId=${BOB_ID}`, "alice-token");
+    expect(list.body.notes).toEqual([body]);
+  });
+
+  it("PATCH answers 400 on text for an empty or a too long text", async () => {
+    const { call } = setup();
+    const note = await createdNote(call);
+    for (const text of ["   ", "a".repeat(MAX_NOTE_LENGTH + 1)]) {
+      const { status, body } = await call("PATCH", `/api/v1/notes/${note.noteId}`, "alice-token", {
+        text,
+      });
+      expect(status).toBe(HTTP_BAD_REQUEST);
+      expect(body.error).toMatchObject({ code: "INVALID_INPUT", field: "text" });
+    }
+  });
+
+  it("answer 404 NOTE_NOT_FOUND for an unknown note, a note of someone else and a bad ID", async () => {
+    const { call } = setup();
+    const note = await createdNote(call);
+    const attempts = [
+      ["PATCH", "/api/v1/notes/not_999999", "alice-token"],
+      ["PATCH", `/api/v1/notes/${note.noteId}`, "bob-token"],
+      ["PATCH", "/api/v1/notes/abc", "alice-token"],
+      ["DELETE", "/api/v1/notes/not_999999", "alice-token"],
+      ["DELETE", `/api/v1/notes/${note.noteId}`, "bob-token"],
+      ["DELETE", "/api/v1/notes/abc", "alice-token"],
+    ] as const;
+    for (const [method, path, token] of attempts) {
+      const { status, body } = await call(
+        method,
+        path,
+        token,
+        method === "PATCH" ? { text: "x" } : undefined,
+      );
+      expect(status).toBe(HTTP_NOT_FOUND);
+      expect(body.error.code).toBe("NOTE_NOT_FOUND");
+    }
+    const list = await call("GET", `/api/v1/notes?aboutUserId=${BOB_ID}`, "alice-token");
+    expect(list.body.notes[0].text).toBe("Likes jazz");
+  });
+
+  it("DELETE /notes/{noteId} returns 204 and the note is gone, a second delete is 404", async () => {
+    const { call } = setup();
+    const note = await createdNote(call);
+    const first = await call("DELETE", `/api/v1/notes/${note.noteId}`, "alice-token");
+    expect(first.status).toBe(HTTP_NO_CONTENT);
+    expect(first.body).toBeUndefined();
+    const list = await call("GET", `/api/v1/notes?aboutUserId=${BOB_ID}`, "alice-token");
+    expect(list.body).toEqual({ notes: [] });
+    const second = await call("DELETE", `/api/v1/notes/${note.noteId}`, "alice-token");
+    expect(second.status).toBe(HTTP_NOT_FOUND);
   });
 });
