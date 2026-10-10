@@ -20,6 +20,7 @@ import {
   createPrismaMessageRepository,
   createPrismaUserReader,
 } from "./data/prismaMessageRepository";
+import { createPrismaProfilePhotoRepository } from "./data/prismaProfilePhotoRepository";
 import { createPrismaProfileRepository } from "./data/prismaProfileRepository";
 import type { PrismaClient } from "./generated/prisma/client";
 import { authRoutes } from "./services/auth/authRoutes";
@@ -42,11 +43,14 @@ import {
   createMessagingService,
   type MessagingService,
 } from "./services/messaging/messagingService";
-import { createInMemoryPhotoUploadClaimer } from "./services/profile/inMemoryPhotoUploadClaimer";
 import { createEngineMatchScorer } from "./services/profile/matchScorer";
 import type { PhotoUploadClaimer } from "./services/profile/photoUploadClaimer";
 import { profileRoutes } from "./services/profile/profileRoutes";
 import { createProfileService, type ProfileService } from "./services/profile/profileService";
+import { photoRoutes } from "./services/photo/photoRoutes";
+import { createPhotoService, type PhotoService } from "./services/photo/photoService";
+import { createRustFSPhotoStore } from "./services/photo/photoStore";
+import { createRustFSPhotoUploads, type RustFSPhotoUploads } from "./services/photo/photoUploads";
 
 /** Parts of the app that tests can replace, for example to avoid real network calls. */
 export interface AppDependencies {
@@ -59,8 +63,10 @@ export interface AppDependencies {
   favoritesNotesService?: FavoritesNotesService;
   matchService?: MatchService;
   profileService?: ProfileService;
-  /** Sign up's photo upload claim (Tae). Until the RustFS version exists, no upload is known. */
+  /** Sign up's photo upload claim (Tae). */
   photoUploads?: PhotoUploadClaimer;
+  /** The Photo Service (Tae). Override in tests to avoid real RustFS calls. */
+  photoService?: PhotoService;
 }
 
 /**
@@ -121,6 +127,22 @@ export function createApp(config: Config, dependencies: AppDependencies = {}) {
     dependencies.matchService ??
     createMatchService({ profiles: createPrismaMatchProfileReader(getPrisma()), engine });
 
+  // Photo functions (Tae). The store talks to RustFS; the upload store keeps the temporary
+  // sign up uploads on top of it, so the claimer the Profile Service uses is the RustFS
+  // version from now on (sign up can finish on a running server).
+  const photoStore = createRustFSPhotoStore(config);
+  const photoUploadsStore: RustFSPhotoUploads = createRustFSPhotoUploads({
+    store: photoStore,
+    secret: config.jwtSecret,
+  });
+  const photoService =
+    dependencies.photoService ??
+    createPhotoService({
+      store: photoStore,
+      uploads: photoUploadsStore,
+      photos: createPrismaProfilePhotoRepository(getPrisma()),
+    });
+
   // Profile Service (Chuan). It shares the favorites repository, so `isFavorite` on a profile
   // agrees with GET /favorites.
   const profileService =
@@ -130,7 +152,7 @@ export function createApp(config: Config, dependencies: AppDependencies = {}) {
       hasher,
       auth: authService,
       places: locationService,
-      photoUploads: dependencies.photoUploads ?? createInMemoryPhotoUploadClaimer(),
+      photoUploads: dependencies.photoUploads ?? photoUploadsStore.claimer,
       favorites,
       scorer: createEngineMatchScorer({ engine }),
     });
@@ -145,5 +167,6 @@ export function createApp(config: Config, dependencies: AppDependencies = {}) {
     .use(locationRoutes(locationService))
     .use(messagingRoutes(messagingService, sessionValidator))
     .use(favoritesNotesRoutes(favoritesNotesService, sessionValidator))
-    .use(matchRoutes(matchService, sessionValidator));
+    .use(matchRoutes(matchService, sessionValidator))
+    .use(photoRoutes(photoService, sessionValidator));
 }
