@@ -58,4 +58,4 @@ Postconditions: profile is stored, the user can log in, the user is visible to F
 - Can `targetGender` have more than one value? (The Match Engine design already allows more than one.)
 - Edit Profile is not a use case yet, but the work assignments give Profile Service "update profile"
 
-Answered since: the rules are in `docs/api-contract.md` (A1 to A8), a user can have more than one target gender, and Edit Profile can change everything except the username and the photo (the photo has its own endpoint), with no password change in v1 (`docs/decisions.md`).
+Answered since: the rules are in `docs/api-contract.md` (A1 to A8), a user can have more than one target gender, and Edit Profile can change everything except the username and the photo (the photo has its own endpoint), with no password change in v1 (`docs/decisions.md`). The resize target is answered too: a photo that is not 1:1 is center-cropped to a square and stored as a JPEG of at most 1024 pixels per side (10 Oct, `docs/decisions.md`).

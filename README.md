@@ -19,23 +19,23 @@ Database tests need `TEST_DATABASE_URL` and run on Linux or WSL (Bun 1.4.2 on Wi
 
 Base path `/api/v1`. Full contract: [docs/api-contract.md](docs/api-contract.md). "Not built" means agreed on paper and owned by someone else.
 
-| Area      | Endpoints                                                                                                                                                                   | State            |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------- |
-| System    | `GET /health`                                                                                                                                                               | built            |
-| Auth      | `POST /sessions`, `POST /sessions/refresh`, `DELETE /sessions/current`                                                                                                      | built            |
-| Profile   | `GET /usernames/{username}`, `POST /users`, `GET` and `PATCH /users/me`, `GET /users/{userId}`                                                                              | built (see note) |
-| Photos    | `POST /photo-uploads`, `DELETE /photo-uploads/{uploadId}`, `PUT /users/me/photo`, `GET /photos/{photoId}`                                                                   | not built        |
-| Location  | `GET /places`                                                                                                                                                               | built            |
-| Matching  | `GET /recommendations`, `GET /candidates`                                                                                                                                   | built            |
-| Messaging | `GET /conversations`, `GET` and `POST /conversations/{userId}/messages`, `PATCH /conversations/{userId}`, `POST /messages/{messageId}/replies`, `GET /messages?unread=true` | built            |
-| Favorites | `GET /favorites`, `PUT` and `DELETE /favorites/{userId}`                                                                                                                    | built            |
-| Notes     | `GET` and `POST /notes`, `PATCH` and `DELETE /notes/{noteId}`, `GET /notes/people`, `GET` and `POST /users/{userId}/notes`                                                  | built            |
+| Area      | Endpoints                                                                                                                                                                   | State |
+| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| System    | `GET /health`                                                                                                                                                               | built |
+| Auth      | `POST /sessions`, `POST /sessions/refresh`, `DELETE /sessions/current`                                                                                                      | built |
+| Profile   | `GET /usernames/{username}`, `POST /users`, `GET` and `PATCH /users/me`, `GET /users/{userId}`                                                                              | built |
+| Photos    | `POST /photo-uploads`, `DELETE /photo-uploads/{uploadId}`, `PUT /users/me/photo`, `GET /photos/{photoId}`                                                                   | built |
+| Location  | `GET /places`                                                                                                                                                               | built |
+| Matching  | `GET /recommendations`, `GET /candidates`                                                                                                                                   | built |
+| Messaging | `GET /conversations`, `GET` and `POST /conversations/{userId}/messages`, `PATCH /conversations/{userId}`, `POST /messages/{messageId}/replies`, `GET /messages?unread=true` | built |
+| Favorites | `GET /favorites`, `PUT` and `DELETE /favorites/{userId}`                                                                                                                    | built |
+| Notes     | `GET` and `POST /notes`, `PATCH` and `DELETE /notes/{noteId}`, `GET /notes/people`, `GET` and `POST /users/{userId}/notes`                                                  | built |
 
 Auth, messaging, favorites and notes read and write PostgreSQL through repositories that Vic wrote and Chuan merged (pull request 4). Chuan wrote the Profile Service and its repositories (pull request 5). The Data Access Layer is described in [docs/data-access.md](docs/data-access.md). The server stops cleanly on `SIGTERM` and refuses a request body over 2 MiB.
 
 **Profile Service (Chuan).** Sign up (`POST /users`) checks every rule from the test plan and names the broken field (for example `preferences.minAge`). It creates the user, the password sign in and the target genders in one transaction, stores the place name as "province, district" (empty when the lookup fails), and returns the same tokens as login. `PATCH /users/me` changes display name, date of birth, gender, location (with a new place name) and preferences. The username cannot be changed. `GET /users/{userId}` shows a candidate with `matchScore` (0 when the two users do not fit each other both ways), `lookingFor` and `isFavorite`. A taken username gives `409 USERNAME_TAKEN`.
 
-**Photos are not finished.** Sign up needs the photo upload that Tae builds on RustFS. Until then the app uses an in-memory version that knows no upload, so `POST /users` answers `400` on `photoUploadId`. Chuan already wrote the database side for Tae: find a photo key by photo ID and replace a user's photo key (`src/services/photo/profilePhotoRepository.ts`). A photo key is `profile-photos/<photoId>.<extension>`, and `users.photo_key` is unique.
+**Photos (Tae).** The photo routes are built on RustFS: the upload is checked (png, jpg, jpeg or webp, at most 1 MB), center-cropped to a square and stored as a JPEG of at most 1024 pixels per side. The temporary upload lives under `uploads/<uploadId>.jpg` for one hour, the delete token is an HMAC of the upload ID, and a sweep deletes the uploads that expire unused. Chuan wrote the database side: find a photo key by photo ID and replace a user's photo key (`src/services/photo/profilePhotoRepository.ts`). A photo key is `profile-photos/<photoId>.jpg`, and `users.photo_key` is unique.
 
 The database has two migrations. The second one replaces the gender `other` with `prefer_not_to_say` (the four genders are `female`, `male`, `non_binary` and `prefer_not_to_say`) and adds the unique index on `users.photo_key`. The seed users have fixed photo IDs and "province, district" place names.
 
