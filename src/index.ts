@@ -7,6 +7,8 @@ import { ConfigError, loadConfig } from "./config/env";
 import { MAX_REQUEST_BODY_BYTES } from "./config/server";
 import { createPrismaClient } from "./data/prismaClient";
 import { createShutdown } from "./shutdown";
+import { createRustFSPhotoStore } from "./services/photo/photoStore";
+import { createRustFSPhotoUploads, startUploadSweep } from "./services/photo/photoUploads";
 
 const EXIT_CODE_BAD_CONFIG = 1;
 
@@ -18,6 +20,14 @@ try {
     maxRequestBodySize: MAX_REQUEST_BODY_BYTES,
   });
   console.log(`Mai Ru API running at http://${app.server?.hostname}:${app.server?.port}`);
+
+  // The temporary photo uploads expire after one hour; the sweep deletes the ones nobody used.
+  const uploadSweep = createRustFSPhotoUploads({
+    store: createRustFSPhotoStore(config),
+    secret: config.jwtSecret,
+  });
+  const stopUploadSweep = startUploadSweep(() => uploadSweep.sweepExpired());
+  process.once("exit", stopUploadSweep);
 
   const shutdown = createShutdown({
     stopServer: () => app.stop(),

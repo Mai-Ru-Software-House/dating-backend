@@ -6,8 +6,8 @@ For Tee. Only row 8 needs an app change; the other rows are information. The bac
 
 | # | Topic | The app today | The backend | Status |
 | - | ----- | ------------- | ----------- | ------ |
-| 1 | Photo upload at sign up | Two steps: `POST /photo-uploads`, then `photoUploadId` in the JSON `POST /users`; `DELETE /photo-uploads/{uploadId}` with `X-Delete-Token` | The same. The backend follows the app. Nothing to change | sign up built (Chuan), the upload is not built (Tae) |
-| 2 | Change the photo | `PUT /users/me/photo`, answer `{ photoUrl }` | The same | not built (Tae). Chuan's database function for the new photo key is built |
+| 1 | Photo upload at sign up | Two steps: `POST /photo-uploads`, then `photoUploadId` in the JSON `POST /users`; `DELETE /photo-uploads/{uploadId}` with `X-Delete-Token` | The same. The backend follows the app. Nothing to change | built (upload and sign up) |
+| 2 | Change the photo | `PUT /users/me/photo`, answer `{ photoUrl }` | The same | built (Tae) |
 | 3 | Photo field | `photoUrl` (a path) | `photoUrl`, for example `/api/v1/photos/pho_b2`. The same field name, so nothing to change here | built |
 | 4 | Logout | `DELETE /sessions/current` with `{ refreshToken }` | The same. Without a body, all refresh tokens of the user are cancelled | built |
 | 5 | Expired token | Refreshes on `401 UNAUTHENTICATED` | The same. There is no `TOKEN_EXPIRED` code | built |
@@ -23,14 +23,14 @@ For Tee. Only row 8 needs an app change; the other rows are information. The bac
 
 - Username 4 to 20 letters, digits and underscore (case does not matter). Password at least 8 characters with a letter and a digit.
 - Date of birth: a real date, not in the future, age at least 18.
-- Photo: png, jpg, jpeg or webp, at most 1 MB, square. Each failed rule has its own message in `error.message`, with `field` `photo`.
+- Photo: png, jpg, jpeg or webp, at most 1 MB. A photo that is not 1:1 is center-cropped to a square, so the app may send any aspect ratio. Each failed rule has its own message in `error.message`, with `field` `photo`.
 - Message 1 to 1000 characters, note 1 to 500 characters, counted after trimming spaces.
 - Search: `minAge` at least 18 and not above `maxAge`, `maxDistanceKm` above 0.
 
 ## Errors the app should handle
 
-`INVALID_INPUT` (with `field`), `UNAUTHENTICATED` (refresh once, then Landing), `INVALID_CREDENTIALS` (stay on the login form), `USER_NOT_FOUND`, `MESSAGE_NOT_FOUND`, `PHOTO_NOT_FOUND`, `PLACE_NOT_FOUND`, `USERNAME_TAKEN`, `GEOCODER_UNAVAILABLE`, `MATCH_ENGINE_UNAVAILABLE` and `INTERNAL_ERROR`. `NOTE_NOT_FOUND` is used by the note edit and delete routes. The code the app has but the backend does not use yet is `UPLOAD_NOT_FOUND` (the temporary upload, Tae).
+`INVALID_INPUT` (with `field`), `UNAUTHENTICATED` (refresh once, then Landing), `INVALID_CREDENTIALS` (stay on the login form), `USER_NOT_FOUND`, `MESSAGE_NOT_FOUND`, `PHOTO_NOT_FOUND`, `PLACE_NOT_FOUND`, `USERNAME_TAKEN`, `GEOCODER_UNAVAILABLE`, `MATCH_ENGINE_UNAVAILABLE` and `INTERNAL_ERROR`. `NOTE_NOT_FOUND` is used by the note edit and delete routes. `UPLOAD_NOT_FOUND` is the code of the temporary upload delete (the app sends the wrong or no token).
 
 ## What is saved
 
-Everything the backend has built is saved in PostgreSQL: login tokens, messages, favorites, notes and the match lists (use the seed users, for example `alice` with `Alice2026`). Sign up, the own profile, the candidate profile and the username check are built (Chuan). Sign up cannot finish yet, because it needs the photo upload that Tae builds on RustFS: until then `POST /users` answers `400` with `field` `photoUploadId`. So only the seed users exist.
+Everything the backend has built is saved in PostgreSQL: login tokens, messages, favorites, notes and the match lists (use the seed users, for example `alice` with `Alice2026`). Sign up, the own profile, the candidate profile, the username check and the photo upload are all built, so the full Create Profile flow (upload, then sign up) works on a running server. A missing, unknown, expired or already used upload answers `400` with `field` `photoUploadId`.

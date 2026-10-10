@@ -17,14 +17,14 @@ This file is checked against the other repos: the app (`dating-frontend`, Tee), 
 | `POST /sessions/refresh` | Chuan | built | Login (keeps the user logged in) |
 | `DELETE /sessions/current` | Chuan | built | Logout |
 | `GET /usernames/{username}` | Chuan | built | Create Profile |
-| `POST /users` | Chuan | built (needs Tae's photo upload to finish, see the note below the table) | Create Profile |
+| `POST /users` | Chuan | built | Create Profile |
 | `GET /users/me` | Chuan | built | App start up, Edit Profile |
 | `PATCH /users/me` | Chuan | built | Edit Profile |
 | `GET /users/{userId}` | Chuan | built | Find Matches (candidate profile) |
-| `POST /photo-uploads` | Tae | not built | Create Profile (the photo step) |
-| `DELETE /photo-uploads/{uploadId}` | Tae | not built | Create Profile (the user picks another photo) |
-| `PUT /users/me/photo` | Tae | not built | Edit Profile |
-| `GET /photos/{photoId}` | Tae | not built | every screen that shows a photo |
+| `POST /photo-uploads` | Tae | built | Create Profile (the photo step) |
+| `DELETE /photo-uploads/{uploadId}` | Tae | built | Create Profile (the user picks another photo) |
+| `PUT /users/me/photo` | Tae | built | Edit Profile |
+| `GET /photos/{photoId}` | Tae | built | every screen that shows a photo |
 | `GET /recommendations` | Vic and Tae | built (reads profiles from PostgreSQL) | Find Matches |
 | `GET /candidates` | Vic and Tae | built (reads profiles from PostgreSQL) | Find Matches (search) |
 | `GET /conversations`, `GET /conversations/{userId}/messages`, `POST /conversations/{userId}/messages`, `PATCH /conversations/{userId}`, `POST /messages/{messageId}/replies`, `GET /messages?unread=true` | Vic | built | Chat list, conversation, send, reply, unread list |
@@ -32,7 +32,7 @@ This file is checked against the other repos: the app (`dating-frontend`, Tee), 
 | `GET /notes`, `POST /notes`, `GET /notes/people`, `PATCH /notes/{noteId}`, `DELETE /notes/{noteId}`, `GET /users/{userId}/notes`, `POST /users/{userId}/notes` | Vic | built | Record, view, edit and delete notes (the `/users/{userId}/notes` paths are the ones in the functional test plan) |
 | `POST /internal/v1/recommendations`, `POST /internal/v1/candidates/search` (Match Engine) | Tae (engine), Vic (caller) | built (caller), follows the engine | Match Service |
 
-The photo routes are Tae's and not built yet. Sign up (`POST /users`) is built, but it takes the photo from a temporary upload (`photoUploadId`), and the running server has no upload store until Tae's RustFS version exists. Until then every sign up answers `400` with `field` `photoUploadId`. The seed users can log in.
+The photo routes are built (Tae): the temporary upload lives in RustFS under `uploads/<uploadId>.jpg` for one hour, the delete token is an HMAC of the upload ID with the JWT secret, and a sweep in the server deletes the uploads that expire unused. A missing, unknown, expired or already used upload still answers `400` with `field` `photoUploadId` at sign up.
 
 ## Shared rules
 
@@ -46,7 +46,7 @@ The photo routes are Tae's and not built yet. Sign up (`POST /users`) is built, 
 - **Paging:** message lists take `limit` and `before` and return `hasMore`. Recommendations take `limit` and `offset`. Chat list, favorites and notes are not paged.
 - **Photos.** A user card carries `photoUrl`, the path `/api/v1/photos/{photoId}`. The app adds the session header when it loads it. At sign up the photo is uploaded first (`POST /photo-uploads`) and the sign up carries its `photoUploadId` (the flow of the app, agreed with Tee on 9 October).
 - **Privacy.** A response never contains a password hash, or another user's date of birth, exact location, favorites or notes. Other users are shown with `age`, `placeName` and `distanceKm` only.
-- **Rules from the functional test plan (A1 to A8):** username 4 to 20 letters, digits and underscore, stored in lowercase, so "Alice" and "alice" are one name; password at least 8 characters with a letter and a digit, hashed with Argon2id; minimum age 18; profile photo png, jpg, jpeg or webp, at most 1 MB, square; message 1 to 1000 characters; note 1 to 500 characters (after trimming, counted as Unicode characters); if the place lookup fails, the profile is still saved with no place name.
+- **Rules from the functional test plan (A1 to A8):** username 4 to 20 letters, digits and underscore, stored in lowercase, so "Alice" and "alice" are one name; password at least 8 characters with a letter and a digit, hashed with Argon2id; minimum age 18; profile photo png, jpg, jpeg or webp, at most 1 MB; a photo that is not 1:1 is center-cropped to a square; message 1 to 1000 characters; note 1 to 500 characters (after trimming, counted as Unicode characters); if the place lookup fails, the profile is still saved with no place name.
 
 ### Error codes
 
@@ -250,7 +250,7 @@ Response `200`: a `CandidateCard` (with `matchScore`), plus:
 
 Status: not built (Tae). Session: **none** (the user has no account yet during Create Profile).
 
-Body: `multipart/form-data`, one file part named `photo`. Rules: png, jpg, jpeg or webp, at most 1 MB, square. `400 INVALID_INPUT` with `field` `photo` and a message that names the failed rule (formats, size, square, missing). Nothing is stored when a rule fails.
+Body: `multipart/form-data`, one file part named `photo`. Rules: png, jpg, jpeg or webp, at most 1 MB. A photo that is not 1:1 is center-cropped to a square, and the photo that is stored is a JPEG of at most 1024 pixels per side. `400 INVALID_INPUT` with `field` `photo` and a message that names the failed rule (formats, size, missing). Nothing is stored when a rule fails.
 
 Response `201`:
 
@@ -258,7 +258,7 @@ Response `201`:
 { "uploadId": "0194a1b2-8d11-7a22-9b33-c4d5e6f7a8b9", "expiresAt": "2026-10-09T09:30:00.000Z", "deleteToken": "6f1c..." }
 ```
 
-Notes: the photo is kept in RustFS under a temporary key (`uploads/<uploadId>.<extension>`) for one hour (`expiresAt`). `deleteToken` proves who may delete it, so the delete needs no session. An upload that is never used is removed after it expires. Because this route needs no session, it is limited per client address (`X-Real-IP`).
+Notes: the photo is kept in RustFS as a JPEG under a temporary key (`uploads/<uploadId>.jpg`) for one hour (`expiresAt`). `deleteToken` proves who may delete it, so the delete needs no session. An upload that is never used is removed after it expires. Because this route needs no session, it is limited per client address (`X-Real-IP`).
 
 ### DELETE /photo-uploads/{uploadId}
 
@@ -268,7 +268,7 @@ Status: not built (Tae). Session: **none**. The header `X-Delete-Token` carries 
 
 Status: not built (Tae). Chuan's database function that swaps the photo key is built. Session: **required**.
 
-Body: `multipart/form-data`, one file part named `photo`, with the same rules as `POST /photo-uploads`. Response `200`: `{ "photoUrl": "/api/v1/photos/{photoId}" }`. The new photo replaces the old one, and the old object is deleted from RustFS only after the new one is saved. The object key is `profile-photos/<photoId>.<extension>`.
+Body: `multipart/form-data`, one file part named `photo`, with the same rules as `POST /photo-uploads`. Response `200`: `{ "photoUrl": "/api/v1/photos/{photoId}" }`. The new photo replaces the old one, and the old object is deleted from RustFS only after the new one is saved. The object key is `profile-photos/<photoId>.jpg`.
 
 ### GET /photos/{photoId}
 
@@ -826,6 +826,8 @@ The routes `GET /internal/v1/match-profiles/{userId}` and `GET /internal/v1/matc
 
 ## Change log
 
+- 10 October 2026 (Tae): the photo routes are built on RustFS (temporary uploads under `uploads/` with HMAC delete tokens and a one-hour expiry, the sweep that deletes the unused ones, the photo change with the old object deleted after the key swap, and photo serving). Sign up now finishes end to end on a running server.
+- 10 October 2026 (Tae): a profile photo that is not 1:1 is center-cropped to a square instead of being rejected, and the stored photo is a JPEG of at most 1024 pixels per side (replaces the A5 square rejection and the no-resize decision of 6 October).
 - 9 October 2026 (Vic): `PATCH /notes/{noteId}` and `DELETE /notes/{noteId}` are built, because the app has the edit and the delete screens. Notes (and `lastNote` in `GET /notes/people`) have a new field `updatedAt`, `null` until the note is edited. New error code `NOTE_NOT_FOUND`. The text limit stays 500 characters (the app's own rule and test plan A7, not the 2000 of the database column).
 - 9 October 2026 (Vic, after Chuan's pull requests 4 and 5): Auth, sign up, the own profile, the candidate profile and the username check are built. Migration 2 replaced the gender `other` with `prefer_not_to_say` and made `users.photo_key` unique. The rules of `POST /users` and `PATCH /users/me` now state the limits the code enforces (name 1 to 50 characters, password up to 1000, ages 18 to 120, radius 1 to 20000 whole km). Statuses "to review" are gone. The photo routes are still Tae's and not built, so sign up cannot finish on a running server yet.
 - 9 October 2026 (Vic, second pass after talking to Tae and Tee): the photo flow follows the app (`POST /photo-uploads`, `DELETE /photo-uploads/{uploadId}`, `photoUploadId` in the JSON sign up, `PUT /users/me/photo`); `bio` and `interests` are dropped (team decision); search stays one way in the engine, so the backend keeps its mutual pre-filter.

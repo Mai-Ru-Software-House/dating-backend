@@ -38,11 +38,9 @@ How they were checked: one set of behaviour tests (`test/repositories/contracts.
 
 ## Still open
 
-### Photos (Tae)
+### Photos (Tae) — built
 
-The database side is done: find the photo key by photo ID and replace a user's key (`ProfilePhotoRepository` above). What is left is on Tae's side: the RustFS version of the photo upload claimer that sign up calls (`src/services/profile/photoUploadClaimer.ts`: copy the upload to `profile-photos/<photoId>.<extension>`, then remove the upload after the user is saved, or delete the copy if saving failed), and serving `GET /photos/{photoId}`. Until the RustFS version exists the running app uses an in-memory claimer that knows no upload, so `POST /users` answers `400` on `photoUploadId`.
-
-The temporary uploads of the sign up flow (`POST /photo-uploads`) need no table in the current proposal: the object `uploads/<uploadId>.<extension>` lives in RustFS, and the delete token is an HMAC of the upload ID. If you prefer a table, it needs `uploadId`, `objectKey`, `deleteTokenHash`, `expiresAt` and a used flag; tell Tae. This is still in the Open list of `docs/decisions.md`.
+Both sides are done. The database side (Chuan) finds the photo key by photo ID and replaces a user's key (`ProfilePhotoRepository` above). The RustFS side (Tae) is built in `src/services/photo/`: the temporary upload lives in RustFS under `uploads/<uploadId>.jpg`, sign up copies it to `profile-photos/<photoId>.jpg` (the claimer in `src/services/profile/photoUploadClaimer.ts`), the photo is center-cropped to a square and re-encoded as a JPEG of at most 1024 pixels per side, and `GET /photos/{photoId}` serves the stored bytes. No `photo_uploads` table: the one-hour expiry and the delete token (an HMAC of the upload ID) live with the object, and a sweep deletes the uploads that expire unused.
 
 ## Test harness
 

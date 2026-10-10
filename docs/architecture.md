@@ -19,8 +19,8 @@ PostgreSQL 18    RustFS (photos)   Match Engine (FastAPI)   Nominatim (OpenStree
 | --------- | ---- | ----- | ----- |
 | Backend, web server framework and REST API layer | App setup, config, CORS, error format, session check, route registration | Vic | built |
 | Auth Service | Login, refresh, logout, Argon2id passwords, JWT access tokens | Chuan | built |
-| Profile Service | Sign up, own profile, candidate profile | Chuan | built (sign up waits for Tae's photo upload) |
-| Photo functions | Upload, validate, store in RustFS, serve profile photos | Tae | not built |
+| Profile Service | Sign up, own profile, candidate profile | Chuan | built |
+| Photo functions | Upload, validate, store in RustFS, serve profile photos | Tae | built |
 | Location Service | Place name from coordinates (Nominatim), distance in km | Vic | built |
 | Messaging Service | Send, reply, chat list (favorites first), unread list | Vic | built |
 | Favorites and Notes Service | Pin users, private notes | Vic | built |
