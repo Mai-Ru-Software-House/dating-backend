@@ -26,6 +26,7 @@ What the team has decided about the backend, and what is still open. Check this 
 | Database | Chuan's schema (PR #3). IDs made by the database with `uuidv7()`. The database has no CHECK rules, so the services check every rule. The generated Prisma client is committed in `src/generated` | Chuan |
 | Images | The backend image is tagged with the commit hash. Only `main` moves `:dev`. The container applies migrations when it starts (to be agreed with Chuan and Tae, see Open) | Vic (8 Oct) |
 | Server | The server refuses a request body over 2 MiB (413, before any route), stops cleanly on `SIGTERM` and `SIGINT` (finishes requests, closes the database, exits 0), and CORS allows only the origins in `CORS_ORIGINS` | Vic (9 Oct) |
+| CORS off | An empty `CORS_ORIGINS` (unset or empty) disables CORS: the CORS plugin is not registered at all, so no CORS headers are sent and the preflight OPTIONS is not answered by it | Tae (15 Oct) |
 | File storage | Tae sets up RustFS: the bucket, its access keys and the upload clean up. The backend only needs `RUSTFS_ENDPOINT`, `RUSTFS_ACCESS_KEY`, `RUSTFS_SECRET_KEY` and `RUSTFS_BUCKET` | Tae (9 Oct) |
 | Docs | The docs in `docs/` are public (the repos are public): no secrets, no personal paths, first names only. Notes that only live on one machine are in `local-docs/` (git ignored) | Vic (9 Oct) |
 | Gender values | Four values: `female`, `male`, `non_binary`, `prefer_not_to_say`. Migration 2 replaced `other` with `prefer_not_to_say`, as the app has it | Chuan (9 Oct) |

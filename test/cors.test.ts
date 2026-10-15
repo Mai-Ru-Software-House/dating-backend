@@ -1,7 +1,8 @@
 /*
  * Tests for CORS: the app origins in CORS_ORIGINS may call the API from a browser or web
  * view, every other origin gets no permission header, and the preflight answer allows the
- * methods the API uses and the headers the app sends.
+ * methods the API uses and the headers the app sends. An empty CORS_ORIGINS disables CORS:
+ * no permission headers at all.
  */
 import { describe, expect, it } from "bun:test";
 
@@ -12,10 +13,9 @@ const ALLOWED_ORIGIN = "http://localhost:8081";
 const OTHER_ALLOWED_ORIGIN = "http://localhost:19006";
 const STRANGER_ORIGIN = "https://evil.example.com";
 
-const config = loadConfig({
+const baseEnv = {
   NODE_ENV: "test",
   PORT: "3000",
-  CORS_ORIGINS: `${ALLOWED_ORIGIN}, ${OTHER_ALLOWED_ORIGIN}`,
   JWT_SECRET: "test-secret",
   DATABASE_URL: "postgres://user:pass@localhost:5432/test",
   RUSTFS_ENDPOINT: "http://localhost:9000",
@@ -24,7 +24,13 @@ const config = loadConfig({
   RUSTFS_BUCKET: "test",
   MATCH_ENGINE_URL: "http://localhost:8000",
   NOMINATIM_URL: "http://localhost:8080",
+};
+
+const config = loadConfig({
+  ...baseEnv,
+  CORS_ORIGINS: `${ALLOWED_ORIGIN}, ${OTHER_ALLOWED_ORIGIN}`,
 });
+const disabledConfig = loadConfig({ ...baseEnv, CORS_ORIGINS: "" });
 
 function preflight(origin: string, method: string, headers = "authorization, content-type") {
   return createApp(config).handle(
@@ -81,5 +87,32 @@ describe("CORS", () => {
     );
     expect(response.status).toBe(200);
     expect(response.headers.get("access-control-allow-origin")).toBeNull();
+  });
+});
+
+describe("CORS with an empty CORS_ORIGINS", () => {
+  it("sets no permission headers on a preflight", async () => {
+    const response = await createApp(disabledConfig).handle(
+      new Request("http://localhost/api/v1/sessions", {
+        method: "OPTIONS",
+        headers: {
+          Origin: ALLOWED_ORIGIN,
+          "Access-Control-Request-Method": "POST",
+          "Access-Control-Request-Headers": "authorization, content-type",
+        },
+      }),
+    );
+    expect(response.headers.get("access-control-allow-origin")).toBeNull();
+    expect(response.headers.get("access-control-allow-credentials")).toBeNull();
+    expect(response.headers.get("access-control-allow-methods")).toBeNull();
+  });
+
+  it("sets no permission headers on a normal answer", async () => {
+    const response = await createApp(disabledConfig).handle(
+      new Request("http://localhost/api/v1/health", { headers: { Origin: ALLOWED_ORIGIN } }),
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("access-control-allow-origin")).toBeNull();
+    expect(response.headers.get("access-control-allow-credentials")).toBeNull();
   });
 });

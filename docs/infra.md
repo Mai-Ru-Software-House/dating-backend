@@ -25,12 +25,12 @@ Networks: `dating-public` (Nginx only) and `dating-internal` (every service). Se
 
 ### What the backend needs and infra does not set yet
 
-The `api` container stops at start up without the first four.
+The `api` container stops at start up without `JWT_SECRET` and `RUSTFS_BUCKET`.
 
 | Variable | Needed | Value |
 | --- | --- | --- |
 | `JWT_SECRET` | required | a long random string (a secret, in the infra `.env`) |
-| `CORS_ORIGINS` | required | comma separated list of app origins |
+| `CORS_ORIGINS` | optional | comma separated list of app origins; an empty value turns CORS off |
 | `RUSTFS_BUCKET` | required | for example `mairu-photos`. Tae creates the bucket and the RustFS set up (9 Oct) |
 | `NOMINATIM_URL` | required by the backend, set by the infra compose files with this default, so it is not needed in the infra `.env` | `https://nominatim.openstreetmap.org` |
 | `ACCESS_TOKEN_TTL_SECONDS` | optional | default `900` (use `60` on a test server for test LG09) |
@@ -51,7 +51,7 @@ Paste-ready block for `docker-compose.dev.yaml` and `docker-compose.prod.yaml`, 
       NOMINATIM_EMAIL: ${NOMINATIM_EMAIL:-}
 ```
 
-And in the infra `.env.example`: `JWT_SECRET`, `CORS_ORIGINS` and `RUSTFS_BUCKET` with dummy values. The full list of backend variables, with defaults, is `.env.example` in this repo.
+And in the infra `.env.example`: `JWT_SECRET` and `RUSTFS_BUCKET` with dummy values (`CORS_ORIGINS` is optional; set it empty to turn CORS off). The full list of backend variables, with defaults, is `.env.example` in this repo.
 
 ### What the Match Engine needs from us
 

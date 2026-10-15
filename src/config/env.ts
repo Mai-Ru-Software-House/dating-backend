@@ -26,7 +26,7 @@ const URL_VARIABLES = [
 const envSchema = t.Object({
   NODE_ENV: t.Union([t.Literal("development"), t.Literal("test"), t.Literal("production")]),
   PORT: t.String({ pattern: "^[0-9]+$" }),
-  CORS_ORIGINS: t.String({ minLength: 1 }),
+  CORS_ORIGINS: t.String(),
   JWT_SECRET: t.String({ minLength: 1 }),
   ACCESS_TOKEN_TTL_SECONDS: t.String({ pattern: POSITIVE_INTEGER_PATTERN }),
   REFRESH_TOKEN_TTL_DAYS: t.String({ pattern: POSITIVE_INTEGER_PATTERN }),
@@ -49,6 +49,7 @@ type RawEnv = Static<typeof envSchema>;
 export interface Config {
   nodeEnv: RawEnv["NODE_ENV"];
   port: number;
+  /** Origins allowed by CORS. An empty list turns CORS off. */
   corsOrigins: string[];
   jwtSecret: string;
   accessTokenTtlSeconds: number;

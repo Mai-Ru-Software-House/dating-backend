@@ -157,16 +157,20 @@ export function createApp(config: Config, dependencies: AppDependencies = {}) {
       scorer: createEngineMatchScorer({ engine }),
     });
 
-  return new Elysia()
-    .use(errorHandler)
-    .use(corsPlugin(config))
-    .use(openapiPlugin())
-    .use(healthRoutes)
-    .use(authRoutes(authService))
-    .use(profileRoutes(profileService, sessionValidator))
-    .use(locationRoutes(locationService))
-    .use(messagingRoutes(messagingService, sessionValidator))
-    .use(favoritesNotesRoutes(favoritesNotesService, sessionValidator))
-    .use(matchRoutes(matchService, sessionValidator))
-    .use(photoRoutes(photoService, sessionValidator));
+  return (
+    new Elysia()
+      .use(errorHandler)
+      // With no origins the CORS plugin is not registered at all, so no CORS headers are
+      // sent and OPTIONS is not answered by the plugin either.
+      .use(config.corsOrigins.length ? corsPlugin(config) : undefined)
+      .use(openapiPlugin())
+      .use(healthRoutes)
+      .use(authRoutes(authService))
+      .use(profileRoutes(profileService, sessionValidator))
+      .use(locationRoutes(locationService))
+      .use(messagingRoutes(messagingService, sessionValidator))
+      .use(favoritesNotesRoutes(favoritesNotesService, sessionValidator))
+      .use(matchRoutes(matchService, sessionValidator))
+      .use(photoRoutes(photoService, sessionValidator))
+  );
 }
