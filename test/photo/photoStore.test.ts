@@ -1,10 +1,13 @@
 /*
  * Tests for the in-memory photo store: the behaviour every PhotoStore must have, so the
- * RustFS version can be checked against it.
+ * RustFS version can be checked against it. Also tests the bucket check that creates the
+ * photo bucket when it is missing.
  */
+import { CreateBucketCommand, HeadBucketCommand } from "@aws-sdk/client-s3";
 import { describe, expect, it } from "bun:test";
 
 import { createInMemoryPhotoStore } from "../../src/services/photo/inMemoryPhotoStore";
+import { ensureRustFSBucket, type BucketClient } from "../../src/services/photo/photoStore";
 
 const NOW = new Date("2026-10-10T10:00:00Z");
 const LATER = new Date("2026-10-10T10:01:00Z");
@@ -77,5 +80,86 @@ describe("createInMemoryPhotoStore", () => {
       { key: "uploads/a.jpg", lastModified: expect.any(Date) },
       { key: "uploads/b.jpg", lastModified: expect.any(Date) },
     ]);
+  });
+});
+
+/** One scripted answer for a fake S3 client: a value to answer with or an error to throw. */
+interface FakeClientStep {
+  answer?: unknown;
+  failWith?: Error;
+}
+
+function fakeBucketClient(steps: FakeClientStep[]): BucketClient & { sent: unknown[] } {
+  const sent: unknown[] = [];
+  return {
+    sent,
+    async send(command: HeadBucketCommand | CreateBucketCommand) {
+      sent.push(command);
+      const step = steps[sent.length - 1];
+      if (step?.failWith !== undefined) {
+        throw step.failWith;
+      }
+      return step?.answer;
+    },
+  };
+}
+
+function headNotFoundError(statusCode: number): Error {
+  const error = new Error(`HTTP ${statusCode}`) as Error & {
+    $metadata?: { httpStatusCode?: number };
+  };
+  error.$metadata = { httpStatusCode: statusCode };
+  return error;
+}
+
+function namedError(name: string): Error {
+  const error = new Error(name);
+  error.name = name;
+  return error;
+}
+
+describe("ensureRustFSBucket", () => {
+  const BUCKET = "mairu-photos";
+
+  it("creates nothing when the bucket exists", async () => {
+    const client = fakeBucketClient([{ answer: {} }]);
+    await ensureRustFSBucket(client, BUCKET);
+    expect(client.sent).toHaveLength(1);
+    expect(client.sent[0]).toBeInstanceOf(HeadBucketCommand);
+  });
+
+  it("creates the bucket when it is missing", async () => {
+    const client = fakeBucketClient([{ failWith: headNotFoundError(404) }, { answer: {} }]);
+    await ensureRustFSBucket(client, BUCKET);
+    expect(client.sent).toHaveLength(2);
+    expect(client.sent[1]).toBeInstanceOf(CreateBucketCommand);
+  });
+
+  it("accepts the create when another start up made the bucket at the same time", async () => {
+    const raced = fakeBucketClient([
+      { failWith: headNotFoundError(404) },
+      { failWith: namedError("BucketAlreadyOwnedByUs") },
+    ]);
+    await expect(ensureRustFSBucket(raced, BUCKET)).resolves.toBeUndefined();
+
+    const other = fakeBucketClient([
+      { failWith: headNotFoundError(404) },
+      { failWith: namedError("AlreadyExists") },
+    ]);
+    await expect(ensureRustFSBucket(other, BUCKET)).resolves.toBeUndefined();
+  });
+
+  it("throws when the bucket is missing and the create fails for another reason", async () => {
+    const client = fakeBucketClient([
+      { failWith: headNotFoundError(404) },
+      { failWith: namedError("AccessDenied") },
+    ]);
+    await expect(ensureRustFSBucket(client, BUCKET)).rejects.toThrow("AccessDenied");
+  });
+
+  it("throws when the head fails without a 404", async () => {
+    const client = fakeBucketClient([{ failWith: headNotFoundError(500) }]);
+    await expect(ensureRustFSBucket(client, BUCKET)).rejects.toThrow("HTTP 500");
+    expect(client.sent).toHaveLength(1);
   });
 });

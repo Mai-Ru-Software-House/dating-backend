@@ -31,7 +31,7 @@ The `api` container stops at start up without `JWT_SECRET` and `RUSTFS_BUCKET`.
 | --- | --- | --- |
 | `JWT_SECRET` | required | a long random string (a secret, in the infra `.env`) |
 | `CORS_ORIGINS` | optional | comma separated list of app origins; an empty value turns CORS off |
-| `RUSTFS_BUCKET` | required | for example `mairu-photos`. Tae creates the bucket and the RustFS set up (9 Oct) |
+| `RUSTFS_BUCKET` | required | for example `mairu-photos`. The backend creates the bucket at start up when it is missing |
 | `NOMINATIM_URL` | required by the backend, set by the infra compose files with this default, so it is not needed in the infra `.env` | `https://nominatim.openstreetmap.org` |
 | `ACCESS_TOKEN_TTL_SECONDS` | optional | default `900` (use `60` on a test server for test LG09) |
 | `REFRESH_TOKEN_TTL_DAYS` | optional | default `30` |
