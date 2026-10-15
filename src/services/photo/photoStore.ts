@@ -1,13 +1,16 @@
 /*
  * Photo functions (Tae): the Photo Store, the one place that talks to RustFS (S3-compatible)
  * for photo bytes. It stores profile photos (`profile-photos/<photoId>.jpg`) and the temporary
- * sign up uploads (`uploads/<uploadId>.jpg`); the database keeps only the object keys. The
- * in-memory version is in inMemoryPhotoStore.ts and is used by the tests.
+ * sign up uploads (`uploads/<uploadId>.jpg`); the database keeps only the object keys. It also
+ * makes sure the photo bucket exists (creating it when it does not). The in-memory version is
+ * in inMemoryPhotoStore.ts and is used by the tests.
  */
 import {
   CopyObjectCommand,
+  CreateBucketCommand,
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadBucketCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
   PutObjectCommand,
@@ -77,6 +80,7 @@ export interface PhotoStore {
 
 /** The error parts the S3 client fills in when a request fails. */
 interface S3RequestError {
+  name?: string;
   $metadata?: { httpStatusCode?: number };
 }
 
@@ -84,13 +88,25 @@ function isNotFound(error: unknown): boolean {
   return (error as S3RequestError | null)?.$metadata?.httpStatusCode === HTTP_NOT_FOUND;
 }
 
+/** The S3 client part the bucket check needs; tests answer the two calls with a fake. */
+export interface BucketClient {
+  send(command: HeadBucketCommand | CreateBucketCommand): Promise<unknown>;
+}
+
+/** The create answers that mean another start up made the bucket at the same moment. */
+const ALREADY_CREATED_ERRORS = new Set(["BucketAlreadyOwnedByUs", "AlreadyExists"]);
+
+function isAlreadyCreated(error: unknown): boolean {
+  return ALREADY_CREATED_ERRORS.has((error as S3RequestError | null)?.name ?? "");
+}
+
 /**
- * Create the RustFS photo store from the environment configuration.
+ * Build the S3 client for RustFS from the `RUSTFS_*` settings.
  * @param config - the validated settings (`RUSTFS_*` variables)
- * @returns the store
+ * @returns the client
  */
-export function createRustFSPhotoStore(config: Config): PhotoStore {
-  const s3 = new S3Client({
+export function createRustFSS3Client(config: Config): S3Client {
+  return new S3Client({
     endpoint: config.rustfsEndpoint,
     region: "us-east-1",
     forcePathStyle: true,
@@ -99,6 +115,39 @@ export function createRustFSPhotoStore(config: Config): PhotoStore {
       secretAccessKey: config.rustfsSecretKey,
     },
   });
+}
+
+/**
+ * Make sure the photo bucket exists, creating it when it does not.
+ * @param s3 - the RustFS S3 client
+ * @param bucket - the bucket name
+ * @throws the failed head or create when the bucket is missing and could not be made
+ */
+export async function ensureRustFSBucket(s3: BucketClient, bucket: string): Promise<void> {
+  try {
+    await s3.send(new HeadBucketCommand({ Bucket: bucket }));
+    return;
+  } catch (error) {
+    if (!isNotFound(error)) {
+      throw error;
+    }
+  }
+  try {
+    await s3.send(new CreateBucketCommand({ Bucket: bucket }));
+  } catch (error) {
+    if (!isAlreadyCreated(error)) {
+      throw error;
+    }
+  }
+}
+
+/**
+ * Create the RustFS photo store from the environment configuration.
+ * @param config - the validated settings (`RUSTFS_*` variables)
+ * @returns the store
+ */
+export function createRustFSPhotoStore(config: Config): PhotoStore {
+  const s3 = createRustFSS3Client(config);
   const bucket = config.rustfsBucket;
 
   return {
