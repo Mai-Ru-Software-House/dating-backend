@@ -45,6 +45,21 @@ describe("loadConfig", () => {
     expect(() => loadConfig({ ...REQUIRED, NOMINATIM_EMAIL: "not an email" })).toThrow(ConfigError);
   });
 
+  it("reads CORS_ORIGINS as a list of origins, one per comma", () => {
+    expect(loadConfig(REQUIRED).corsOrigins).toEqual(["http://localhost:8081"]);
+    expect(
+      loadConfig({
+        ...REQUIRED,
+        CORS_ORIGINS: "http://a.example.com, https://b.example.com",
+      }).corsOrigins,
+    ).toEqual(["http://a.example.com", "https://b.example.com"]);
+  });
+
+  it("treats an empty CORS_ORIGINS as no allowed origins", () => {
+    expect(loadConfig({ ...REQUIRED, CORS_ORIGINS: "" }).corsOrigins).toEqual([]);
+    expect(loadConfig({ ...REQUIRED, CORS_ORIGINS: "  ,  " }).corsOrigins).toEqual([]);
+  });
+
   it("rejects a missing JWT_SECRET", () => {
     const withoutSecret: Record<string, string | undefined> = { ...REQUIRED };
     delete withoutSecret.JWT_SECRET;
