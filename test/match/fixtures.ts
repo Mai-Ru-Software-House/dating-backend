@@ -290,32 +290,32 @@ function recommend(body: Record<string, unknown>): Response {
 }
 
 function search(body: Record<string, unknown>): Response {
-  const location = body.location as { lat?: number; lng?: number } | undefined;
+  const location = body.location as { lat?: unknown; lng?: unknown } | undefined;
+  const lat = location?.lat;
+  const lng = location?.lng;
   const wanted = body.gender;
+  const candidates = body.candidates;
   const isValid =
     Number.isInteger(body.ageMin) &&
     Number.isInteger(body.ageMax) &&
     Array.isArray(wanted) &&
     typeof body.radiusKm === "number" &&
-    typeof location?.lat === "number" &&
-    typeof location.lng === "number" &&
+    typeof lat === "number" &&
+    typeof lng === "number" &&
     Number.isInteger(body.limit) &&
-    Array.isArray(body.candidates);
-  if (!isValid || location === undefined || !Array.isArray(body.candidates)) {
+    Array.isArray(candidates);
+  if (!isValid) {
     return badRequest(
       "ageMin, ageMax, gender, radiusKm, location, limit and candidates are required",
     );
   }
   const found: { userId: string; distanceKm: number }[] = [];
-  for (const raw of body.candidates) {
+  for (const raw of candidates as unknown[]) {
     const candidate = checkProfile(raw, false);
     if (typeof candidate === "string") {
       return badRequest(candidate);
     }
-    const km = distanceKm(
-      { lat: location.lat as number, lon: location.lng as number },
-      { lat: candidate.latitude, lon: candidate.longitude },
-    );
+    const km = distanceKm({ lat, lon: lng }, { lat: candidate.latitude, lon: candidate.longitude });
     const isMatch =
       candidate.age >= (body.ageMin as number) &&
       candidate.age <= (body.ageMax as number) &&
@@ -344,20 +344,21 @@ export function createFakeEngine() {
   const calls: EngineCall[] = [];
   const state = { isDown: false };
 
-  const fakeFetch = (async (input: string | URL | Request, init?: RequestInit) => {
+  const fakeFetch = ((input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(typeof input === "string" || input instanceof URL ? input : input.url);
-    const body = JSON.parse(String(init?.body ?? "{}")) as Record<string, unknown>;
+    const rawBody = typeof init?.body === "string" ? init.body : "{}";
+    const body = JSON.parse(rawBody) as Record<string, unknown>;
     calls.push({ path: url.pathname, body });
     if (state.isDown) {
-      throw new TypeError("fetch failed");
+      return Promise.reject(new TypeError("fetch failed"));
     }
     if (url.pathname === "/internal/v1/recommendations") {
-      return recommend(body);
+      return Promise.resolve(recommend(body));
     }
     if (url.pathname === "/internal/v1/candidates/search") {
-      return search(body);
+      return Promise.resolve(search(body));
     }
-    return new Response("not found", { status: 404 });
+    return Promise.resolve(new Response("not found", { status: 404 }));
   }) as typeof fetch;
 
   return { fetch: fakeFetch, calls, state };

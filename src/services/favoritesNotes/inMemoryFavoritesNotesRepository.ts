@@ -36,26 +36,27 @@ export function createInMemoryFavoritesRepository(
   }
 
   return {
-    async addFavorite(userId, favoriteUserId, createdAt) {
+    addFavorite(userId, favoriteUserId, createdAt) {
       const existing = favorites.get(key(userId, favoriteUserId));
       if (existing !== undefined) {
-        return { ...existing };
+        return Promise.resolve({ ...existing });
       }
       const favorite = { userId, favoriteUserId, createdAt };
       favorites.set(key(userId, favoriteUserId), favorite);
-      return { ...favorite };
+      return Promise.resolve({ ...favorite });
     },
 
-    async removeFavorite(userId, favoriteUserId) {
+    removeFavorite(userId, favoriteUserId) {
       favorites.delete(key(userId, favoriteUserId));
+      return Promise.resolve();
     },
 
-    async listFavorites(userId) {
-      return listFor(userId).map((favorite) => ({ ...favorite }));
+    listFavorites(userId) {
+      return Promise.resolve(listFor(userId).map((favorite) => ({ ...favorite })));
     },
 
-    async listFavoriteUserIds(userId) {
-      return listFor(userId).map((favorite) => favorite.favoriteUserId);
+    listFavoriteUserIds(userId) {
+      return Promise.resolve(listFor(userId).map((favorite) => favorite.favoriteUserId));
     },
   };
 }
@@ -89,18 +90,18 @@ export function createInMemoryNotesRepository(
   }
 
   return {
-    async insertNote(note) {
-      return { ...store(note) };
+    insertNote(note) {
+      return Promise.resolve({ ...store(note) });
     },
 
-    async listNotesAbout(authorId, subjectUserId) {
+    listNotesAbout(authorId, subjectUserId) {
       const mine = notes.filter(
         (note) => note.authorId === authorId && note.subjectUserId === subjectUserId,
       );
-      return newestFirst(mine).map((note) => ({ ...note }));
+      return Promise.resolve(newestFirst(mine).map((note) => ({ ...note })));
     },
 
-    async listNotePeople(authorId) {
+    listNotePeople(authorId) {
       const mine = newestFirst(notes.filter((note) => note.authorId === authorId));
       const people = new Map<string, NotePersonSummary>();
       for (const note of mine) {
@@ -115,26 +116,26 @@ export function createInMemoryNotesRepository(
           person.noteCount += 1;
         }
       }
-      return [...people.values()];
+      return Promise.resolve([...people.values()]);
     },
 
-    async updateNoteText(noteId, authorId, text, updatedAt) {
+    updateNoteText(noteId, authorId, text, updatedAt) {
       const note = notes.find((item) => item.noteId === noteId && item.authorId === authorId);
       if (note === undefined) {
-        return null;
+        return Promise.resolve(null);
       }
       note.text = text;
       note.updatedAt = updatedAt;
-      return { ...note };
+      return Promise.resolve({ ...note });
     },
 
-    async deleteNote(noteId, authorId) {
+    deleteNote(noteId, authorId) {
       const index = notes.findIndex((item) => item.noteId === noteId && item.authorId === authorId);
       if (index < 0) {
-        return false;
+        return Promise.resolve(false);
       }
       notes.splice(index, 1);
-      return true;
+      return Promise.resolve(true);
     },
   };
 }

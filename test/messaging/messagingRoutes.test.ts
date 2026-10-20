@@ -45,9 +45,9 @@ interface MessageBody {
   replyTo: { messageId: string; senderId: string; text: string } | null;
 }
 
-const fakeValidator: SessionValidator = async (token) => {
+const fakeValidator: SessionValidator = (token) => {
   const userId = USER_IDS_BY_TOKEN.get(token);
-  return userId === undefined ? null : { userId };
+  return Promise.resolve(userId === undefined ? null : { userId });
 };
 
 function createTestApp() {

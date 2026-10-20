@@ -151,7 +151,7 @@ describe("sendMessage", () => {
 
     const accepted = await send(service, ALICE_ID, BOB_ID, THAI_LETTER.repeat(MAX_MESSAGE_LENGTH));
 
-    expect([...accepted.text]).toHaveLength(MAX_MESSAGE_LENGTH);
+    expect(Array.from(accepted.text)).toHaveLength(MAX_MESSAGE_LENGTH);
     await expectApiError(
       send(service, ALICE_ID, BOB_ID, THAI_LETTER.repeat(MAX_MESSAGE_LENGTH + 1)),
       HTTP_BAD_REQUEST,
@@ -162,7 +162,7 @@ describe("sendMessage", () => {
 
   it("counts a Thai vowel mark as its own character", async () => {
     const { service } = createTestService();
-    const marksPerLetter = [...THAI_LETTER_WITH_VOWEL].length;
+    const marksPerLetter = Array.from(THAI_LETTER_WITH_VOWEL).length;
     const pairsAtLimit = MAX_MESSAGE_LENGTH / marksPerLetter;
 
     const accepted = await send(
@@ -172,7 +172,7 @@ describe("sendMessage", () => {
       THAI_LETTER_WITH_VOWEL.repeat(pairsAtLimit),
     );
 
-    expect([...accepted.text]).toHaveLength(MAX_MESSAGE_LENGTH);
+    expect(Array.from(accepted.text)).toHaveLength(MAX_MESSAGE_LENGTH);
     await expectApiError(
       send(service, ALICE_ID, BOB_ID, THAI_LETTER_WITH_VOWEL.repeat(pairsAtLimit + 1)),
       HTTP_BAD_REQUEST,
@@ -698,7 +698,7 @@ describe("getConversation", () => {
   it("uses a limit of 30 when none is sent", async () => {
     const { service } = createTestService();
     for (let i = 0; i <= DEFAULT_CONVERSATION_LIMIT; i += 1) {
-      await send(service, ALICE_ID, BOB_ID, `m${i}`);
+      await send(service, ALICE_ID, BOB_ID, `m${String(i)}`);
     }
 
     const page = await service.getConversation(ALICE_ID, BOB_ID, {});
@@ -742,7 +742,7 @@ describe("getConversation", () => {
       const isFromAlice = i % 2 === 0;
       const from = isFromAlice ? ALICE_ID : BOB_ID;
       const to = isFromAlice ? BOB_ID : ALICE_ID;
-      sent.push((await send(service, from, to, `m${i}`)).messageId);
+      sent.push((await send(service, from, to, `m${String(i)}`)).messageId);
       if (i % 2 === 1) {
         clock.advance();
       }
@@ -765,7 +765,7 @@ describe("getConversation", () => {
     const { service, clock } = createTestService();
     const ids: string[] = [];
     for (let i = 0; i < 5; i += 1) {
-      ids.push((await send(service, BOB_ID, ALICE_ID, `m${i}`)).messageId);
+      ids.push((await send(service, BOB_ID, ALICE_ID, `m${String(i)}`)).messageId);
       clock.advance();
     }
 
@@ -907,7 +907,9 @@ describe("getUnreadMessages", () => {
     const { service } = createTestService();
     const sent: string[] = [];
     for (let i = 0; i < 5; i += 1) {
-      sent.push((await send(service, i % 2 === 0 ? BOB_ID : CHAI_ID, ALICE_ID, `m${i}`)).messageId);
+      sent.push(
+        (await send(service, i % 2 === 0 ? BOB_ID : CHAI_ID, ALICE_ID, `m${String(i)}`)).messageId,
+      );
     }
 
     const first = await service.getUnreadMessages(ALICE_ID, { limit: 3 });
@@ -954,7 +956,7 @@ describe("getUnreadMessages", () => {
   it("uses a limit of 50 when none is sent", async () => {
     const { service } = createTestService();
     for (let i = 0; i <= DEFAULT_UNREAD_LIMIT; i += 1) {
-      await send(service, BOB_ID, ALICE_ID, `m${i}`);
+      await send(service, BOB_ID, ALICE_ID, `m${String(i)}`);
     }
 
     const result = await service.getUnreadMessages(ALICE_ID, {});

@@ -35,7 +35,7 @@ function createTestApp(handler: Parameters<typeof createMockFetch>[0]) {
 
 async function getPlaces(app: ReturnType<typeof createApp>, query: string) {
   const response = await app.handle(new Request(`http://localhost/api/v1/places${query}`));
-  return { status: response.status, body: await response.json() };
+  return { status: response.status, body: (await response.json()) as unknown };
 }
 
 describe("GET /api/v1/places", () => {

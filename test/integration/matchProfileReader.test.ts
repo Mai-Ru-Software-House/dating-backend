@@ -29,6 +29,14 @@ describe.skipIf(!hasTestDatabase)("Prisma Match profile reader", () => {
   const reader = createPrismaMatchProfileReader(prisma);
   const idByUsername = new Map<string, string>();
 
+  function idOf(username: string): string {
+    const id = idByUsername.get(username);
+    if (id === undefined) {
+      throw new Error(`The test user ${username} was not inserted.`);
+    }
+    return id;
+  }
+
   async function insert(profile: MatchProfile): Promise<void> {
     const user = await prisma.user.create({
       data: {
@@ -64,9 +72,9 @@ describe.skipIf(!hasTestDatabase)("Prisma Match profile reader", () => {
   });
 
   it("maps a user, the target preferences and the photo ID", async () => {
-    const alice = await reader.findProfile(idByUsername.get("alice") as string);
+    const alice = await reader.findProfile(idOf("alice"));
     expect(alice).toEqual({
-      userId: idByUsername.get("alice") as string,
+      userId: idOf("alice"),
       username: "alice",
       displayName: "Alice",
       photoId: "alice",
@@ -85,7 +93,7 @@ describe.skipIf(!hasTestDatabase)("Prisma Match profile reader", () => {
   });
 
   it("lists everyone except the user, and honours the limit", async () => {
-    const aliceId = idByUsername.get("alice") as string;
+    const aliceId = idOf("alice");
     const pool = await reader.listPool(aliceId, 2000);
     expect(pool).toHaveLength(TEST_USERS.length - 1);
     expect(pool.map((profile) => profile.userId)).not.toContain(aliceId);
@@ -93,7 +101,7 @@ describe.skipIf(!hasTestDatabase)("Prisma Match profile reader", () => {
   });
 
   it("keeps several target genders", async () => {
-    const bobId = idByUsername.get("bob") as string;
+    const bobId = idOf("bob");
     await prisma.userTargetGender.create({ data: { userId: bobId, genderCode: "non_binary" } });
     const bob = await reader.findProfile(bobId);
     expect([...(bob?.preference.genders ?? [])].sort()).toEqual(["female", "non_binary"]);
@@ -111,14 +119,8 @@ describe.skipIf(!hasTestDatabase)("Prisma Match profile reader", () => {
       now: () => NOW,
     });
 
-    const { recommendations } = await service.getRecommendations(
-      idByUsername.get("alice") as string,
-      {},
-    );
+    const { recommendations } = await service.getRecommendations(idOf("alice"), {});
     expect(recommendations.map((card) => card.username)).toEqual(["bob", "chai"]);
-    expect(recommendations.map((card) => card.userId)).toEqual([
-      idByUsername.get("bob") as string,
-      idByUsername.get("chai") as string,
-    ]);
+    expect(recommendations.map((card) => card.userId)).toEqual([idOf("bob"), idOf("chai")]);
   });
 });

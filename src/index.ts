@@ -46,7 +46,10 @@ async function makeSurePhotoBucketExists(s3: S3Client, bucket: string): Promise<
         );
         return;
       }
-      console.error(`Could not make sure the photo bucket exists; retrying in ${delay} ms:`, error);
+      console.error(
+        `Could not make sure the photo bucket exists; retrying in ${String(delay)} ms:`,
+        error,
+      );
       await sleep(delay);
     }
   }
@@ -59,7 +62,9 @@ try {
     port: config.port,
     maxRequestBodySize: MAX_REQUEST_BODY_BYTES,
   });
-  console.log(`Mai Ru API running at http://${app.server?.hostname}:${app.server?.port}`);
+  console.log(
+    `Mai Ru API running at http://${String(app.server?.hostname)}:${String(app.server?.port)}`,
+  );
 
   // The photo bucket is created when it is missing. This runs in the background, because the
   // server must start even when RustFS is not up yet.

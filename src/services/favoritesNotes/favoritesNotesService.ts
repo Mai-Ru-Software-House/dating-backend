@@ -147,8 +147,8 @@ export function validateNoteText(text: string): string {
   if (trimmed === "") {
     throw invalidInput("text", "The note cannot be empty.");
   }
-  if ([...trimmed].length > MAX_NOTE_LENGTH) {
-    throw invalidInput("text", `The note can have at most ${MAX_NOTE_LENGTH} characters.`);
+  if (Array.from(trimmed).length > MAX_NOTE_LENGTH) {
+    throw invalidInput("text", `The note can have at most ${String(MAX_NOTE_LENGTH)} characters.`);
   }
   return trimmed;
 }

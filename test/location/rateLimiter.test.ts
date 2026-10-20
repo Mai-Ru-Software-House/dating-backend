@@ -9,8 +9,9 @@ function createFakeClock() {
   let current = 1_000_000;
   return {
     now: () => current,
-    sleep: async (ms: number) => {
+    sleep: (ms: number) => {
       current += ms;
+      return Promise.resolve();
     },
     advance: (ms: number) => {
       current += ms;
@@ -25,23 +26,25 @@ describe("createRateLimiter", () => {
     const startTimes: number[] = [];
 
     for (let call = 0; call < 3; call += 1) {
-      await limiter.schedule(async () => {
+      await limiter.schedule(() => {
         startTimes.push(clock.now());
+        return Promise.resolve();
       });
     }
 
-    expect(startTimes[1]! - startTimes[0]!).toBe(1000);
-    expect(startTimes[2]! - startTimes[1]!).toBe(1000);
+    const [first = 0, second = 0, third = 0] = startTimes;
+    expect(second - first).toBe(1000);
+    expect(third - second).toBe(1000);
   });
 
   it("does not wait when enough time has passed", async () => {
     const clock = createFakeClock();
     const limiter = createRateLimiter({ minIntervalMs: 1000, maxWaitMs: 5000, ...clock });
 
-    await limiter.schedule(async () => undefined);
+    await limiter.schedule(() => Promise.resolve(undefined));
     clock.advance(1500);
     const before = clock.now();
-    await limiter.schedule(async () => undefined);
+    await limiter.schedule(() => Promise.resolve(undefined));
 
     expect(clock.now()).toBe(before);
   });
@@ -53,8 +56,9 @@ describe("createRateLimiter", () => {
 
     await Promise.all(
       [1, 2, 3].map((id) =>
-        limiter.schedule(async () => {
+        limiter.schedule(() => {
           order.push(id);
+          return Promise.resolve();
         }),
       ),
     );
@@ -69,31 +73,30 @@ describe("createRateLimiter", () => {
       minIntervalMs: 1000,
       maxWaitMs: 2000,
       now: clock.now,
-      sleep: async () => undefined,
+      sleep: () => Promise.resolve(undefined),
     });
-    const task = async () => "ok";
+    const task = () => Promise.resolve("ok");
 
     // These three reserve slots at +0, +1000 and +2000 ms.
     const accepted = [limiter.schedule(task), limiter.schedule(task), limiter.schedule(task)];
     const rejected = limiter.schedule(task);
 
-    await expect(rejected).rejects.toBeInstanceOf(RateLimitExceededError);
+    expect(await rejected.catch((error: unknown) => error)).toBeInstanceOf(RateLimitExceededError);
     expect(await Promise.all(accepted)).toEqual(["ok", "ok", "ok"]);
 
     // If the rejected call had used a slot, this call would wait 3000 ms and be rejected too.
     clock.advance(1000);
-    await expect(limiter.schedule(task)).resolves.toBe("ok");
+    expect(await limiter.schedule(task)).toBe("ok");
   });
 
   it("passes the task result and its error through", async () => {
     const clock = createFakeClock();
     const limiter = createRateLimiter({ minIntervalMs: 1000, maxWaitMs: 5000, ...clock });
 
-    expect(await limiter.schedule(async () => "done")).toBe("done");
-    await expect(
-      limiter.schedule(async () => {
-        throw new Error("boom");
-      }),
-    ).rejects.toThrow("boom");
+    expect(await limiter.schedule(() => Promise.resolve("done"))).toBe("done");
+    const error = await limiter
+      .schedule(() => Promise.reject(new Error("boom")))
+      .catch((reason: unknown) => reason);
+    expect(error).toEqual(new Error("boom"));
   });
 });

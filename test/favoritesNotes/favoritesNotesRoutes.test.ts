@@ -26,10 +26,22 @@ const MAX_NOTE_LENGTH = 500;
 const ONE_MINUTE_MS = 60_000;
 
 const TOKENS: Record<string, string> = { "alice-token": ALICE_ID, "bob-token": BOB_ID };
-const fakeValidator: SessionValidator = async (token) => {
+const fakeValidator: SessionValidator = (token) => {
   const userId = TOKENS[token];
-  return userId === undefined ? null : { userId };
+  return Promise.resolve(userId === undefined ? null : { userId });
 };
+
+/** The JSON fields these tests read. Each route answers only some of them. */
+interface ResponseBody {
+  favorites: { user: unknown }[];
+  notes: { text: string }[];
+  people: unknown[];
+  noteId: string;
+  aboutUserId: string;
+  createdAt: string;
+  updatedAt: string | null;
+  error: { code: string; message: string };
+}
 
 function setup() {
   const { service, clock } = createTestFavoritesNotes();
@@ -54,7 +66,10 @@ function setup() {
       }),
     );
     const text = await response.text();
-    return { status: response.status, body: text === "" ? undefined : JSON.parse(text) };
+    return {
+      status: response.status,
+      body: (text === "" ? undefined : JSON.parse(text)) as ResponseBody,
+    };
   }
   return { call, clock };
 }
@@ -72,7 +87,7 @@ describe("favorites routes", () => {
     const { status, body } = await call("GET", "/api/v1/favorites", "alice-token");
     expect(status).toBe(HTTP_OK);
     expect(body.favorites).toHaveLength(1);
-    expect(body.favorites[0].user).toEqual({
+    expect(body.favorites[0]?.user).toEqual({
       userId: CHAI_ID,
       displayName: "Chai",
       photoUrl: "/api/v1/photos/pho_chai",
@@ -142,17 +157,15 @@ describe("notes routes", () => {
     expect(created.body.updatedAt).toBeNull();
     const list = await call("GET", `/api/v1/notes?aboutUserId=${BOB_ID}`, "alice-token");
     expect(list.status).toBe(HTTP_OK);
-    expect(list.body.notes).toEqual([created.body]);
+    expect(list.body.notes as unknown).toEqual([created.body]);
   });
 
   it("GET /notes shows the seeded note about chai (NT04) and none about dan (NT03)", async () => {
     const { call } = setup();
     const chai = await call("GET", `/api/v1/notes?aboutUserId=${CHAI_ID}`, "alice-token");
-    expect(chai.body.notes.map((note: { text: string }) => note.text)).toEqual([
-      "Met at a cafe in Ari last month.",
-    ]);
+    expect(chai.body.notes.map((note) => note.text)).toEqual(["Met at a cafe in Ari last month."]);
     const dan = await call("GET", `/api/v1/notes?aboutUserId=${DAN_ID}`, "alice-token");
-    expect(dan.body).toEqual({ notes: [] });
+    expect(dan.body as unknown).toEqual({ notes: [] });
   });
 
   it("GET /notes without aboutUserId answers 400 with the field", async () => {
@@ -233,7 +246,7 @@ describe("test plan paths /users/{userId}/notes", () => {
     expect(created.status).toBe(HTTP_CREATED);
     expect(created.body.aboutUserId).toBe(BOB_ID);
     const list = await call("GET", `/api/v1/users/${BOB_ID}/notes`, "alice-token");
-    expect(list.body.notes).toEqual([created.body]);
+    expect(list.body.notes as unknown).toEqual([created.body]);
   });
 
   it("NT08: bob sees only his own notes about alice", async () => {
@@ -243,9 +256,9 @@ describe("test plan paths /users/{userId}/notes", () => {
     });
     const forBob = await call("GET", `/api/v1/users/${ALICE_ID}/notes`, "bob-token");
     expect(forBob.status).toBe(HTTP_OK);
-    expect(forBob.body).toEqual({ notes: [] });
+    expect(forBob.body as unknown).toEqual({ notes: [] });
     const peopleForBob = await call("GET", "/api/v1/notes/people", "bob-token");
-    expect(peopleForBob.body).toEqual({ people: [] });
+    expect(peopleForBob.body as unknown).toEqual({ people: [] });
   });
 });
 
@@ -282,7 +295,7 @@ describe("note edit and delete routes", () => {
     });
     expect(typeof body.updatedAt).toBe("string");
     const list = await call("GET", `/api/v1/notes?aboutUserId=${BOB_ID}`, "alice-token");
-    expect(list.body.notes).toEqual([body]);
+    expect(list.body.notes as unknown).toEqual([body]);
   });
 
   it("PATCH answers 400 on text for an empty or a too long text", async () => {
@@ -319,7 +332,7 @@ describe("note edit and delete routes", () => {
       expect(body.error.code).toBe("NOTE_NOT_FOUND");
     }
     const list = await call("GET", `/api/v1/notes?aboutUserId=${BOB_ID}`, "alice-token");
-    expect(list.body.notes[0].text).toBe("Likes jazz");
+    expect(list.body.notes[0]?.text).toBe("Likes jazz");
   });
 
   it("DELETE /notes/{noteId} returns 204 and the note is gone, a second delete is 404", async () => {
@@ -329,7 +342,7 @@ describe("note edit and delete routes", () => {
     expect(first.status).toBe(HTTP_NO_CONTENT);
     expect(first.body).toBeUndefined();
     const list = await call("GET", `/api/v1/notes?aboutUserId=${BOB_ID}`, "alice-token");
-    expect(list.body).toEqual({ notes: [] });
+    expect(list.body as unknown).toEqual({ notes: [] });
     const second = await call("DELETE", `/api/v1/notes/${note.noteId}`, "alice-token");
     expect(second.status).toBe(HTTP_NOT_FOUND);
   });

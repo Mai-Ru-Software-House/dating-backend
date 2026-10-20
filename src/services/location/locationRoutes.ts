@@ -29,7 +29,7 @@ function assertInRange(field: string, value: number, min: number, max: number): 
     throw new ApiError(
       HTTP_BAD_REQUEST,
       ERROR_CODES.invalidInput,
-      `${field} must be a number from ${min} to ${max}.`,
+      `${field} must be a number from ${String(min)} to ${String(max)}.`,
       field,
     );
   }

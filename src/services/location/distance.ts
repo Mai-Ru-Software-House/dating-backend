@@ -22,7 +22,7 @@ function assertValidCoordinates(point: Coordinates): void {
   const isLatValid = Number.isFinite(point.lat) && Math.abs(point.lat) <= MAX_LATITUDE;
   const isLonValid = Number.isFinite(point.lon) && Math.abs(point.lon) <= MAX_LONGITUDE;
   if (!isLatValid || !isLonValid) {
-    throw new RangeError(`Invalid coordinates: lat ${point.lat}, lon ${point.lon}`);
+    throw new RangeError(`Invalid coordinates: lat ${String(point.lat)}, lon ${String(point.lon)}`);
   }
 }
 

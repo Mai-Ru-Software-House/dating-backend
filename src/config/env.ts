@@ -86,6 +86,15 @@ function isValidUrl(value: string): boolean {
 }
 
 /**
+ * Treat an empty string as a missing value.
+ * @param value - the text to check
+ * @returns the text, or undefined when it is missing or empty
+ */
+function emptyToUndefined(value: string | undefined): string | undefined {
+  return value === "" ? undefined : value;
+}
+
+/**
  * Read and validate the environment variables.
  * @param source - variables to read, defaults to the process environment
  * @returns the validated, typed config
@@ -102,7 +111,7 @@ export function loadConfig(source: Record<string, string | undefined> = process.
     ARGON2_TIME_COST: source.ARGON2_TIME_COST ?? DEFAULT_ARGON2_TIME_COST,
     MATCH_ENGINE_TIMEOUT_MS: source.MATCH_ENGINE_TIMEOUT_MS ?? DEFAULT_MATCH_ENGINE_TIMEOUT_MS,
     // An empty value (NOMINATIM_EMAIL=) means "not set".
-    NOMINATIM_EMAIL: source.NOMINATIM_EMAIL?.trim() || undefined,
+    NOMINATIM_EMAIL: emptyToUndefined(source.NOMINATIM_EMAIL?.trim()),
   };
 
   const problems = [...Value.Errors(envSchema, candidate)].map((error) => {
@@ -113,7 +122,7 @@ export function loadConfig(source: Record<string, string | undefined> = process.
   if (problems.length === 0) {
     const raw = candidate as RawEnv;
     if (Number(raw.PORT) > MAX_PORT) {
-      problems.push(`PORT: must be at most ${MAX_PORT}`);
+      problems.push(`PORT: must be at most ${String(MAX_PORT)}`);
     }
     for (const name of URL_VARIABLES) {
       if (!isValidUrl(raw[name])) {

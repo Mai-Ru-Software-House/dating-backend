@@ -42,7 +42,7 @@ export function roundCoordinate(value: number): number {
  * @returns a key that is the same for points less than about 100 m apart
  */
 export function buildCacheKey(lat: number, lon: number, language: string): string {
-  return `${roundCoordinate(lat)}:${roundCoordinate(lon)}:${language}`;
+  return `${String(roundCoordinate(lat))}:${String(roundCoordinate(lon))}:${language}`;
 }
 
 /**

@@ -92,7 +92,10 @@ function invalidInput(field: string, message: string): ApiError {
 function assertWholeNumberInRange(field: string, value: number, min: number, max: number): number {
   // Written so that NaN also fails.
   if (!(Number.isInteger(value) && value >= min && value <= max)) {
-    throw invalidInput(field, `${field} must be a whole number from ${min} to ${max}.`);
+    throw invalidInput(
+      field,
+      `${field} must be a whole number from ${String(min)} to ${String(max)}.`,
+    );
   }
   return value;
 }
@@ -162,10 +165,16 @@ export function createMatchService(options: MatchServiceOptions): MatchService {
     const lat = query.lat ?? user.latitude;
     const lon = query.lon ?? user.longitude;
     if (!(lat >= MIN_LATITUDE && lat <= MAX_LATITUDE)) {
-      throw invalidInput("lat", `lat must be a number from ${MIN_LATITUDE} to ${MAX_LATITUDE}.`);
+      throw invalidInput(
+        "lat",
+        `lat must be a number from ${String(MIN_LATITUDE)} to ${String(MAX_LATITUDE)}.`,
+      );
     }
     if (!(lon >= MIN_LONGITUDE && lon <= MAX_LONGITUDE)) {
-      throw invalidInput("lon", `lon must be a number from ${MIN_LONGITUDE} to ${MAX_LONGITUDE}.`);
+      throw invalidInput(
+        "lon",
+        `lon must be a number from ${String(MIN_LONGITUDE)} to ${String(MAX_LONGITUDE)}.`,
+      );
     }
     return { lat, lon };
   }
@@ -183,7 +192,7 @@ export function createMatchService(options: MatchServiceOptions): MatchService {
       throw invalidInput("maxAge", "maxAge must be a whole number.");
     }
     if (ageMin < MIN_AGE) {
-      throw invalidInput("minAge", `The minimum age is ${MIN_AGE}.`);
+      throw invalidInput("minAge", `The minimum age is ${String(MIN_AGE)}.`);
     }
     if (ageMin > ageMax) {
       throw invalidInput(

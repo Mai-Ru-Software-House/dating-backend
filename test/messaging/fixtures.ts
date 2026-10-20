@@ -122,8 +122,9 @@ export function createTestService(favoritesByUser: Record<string, string[]> = {}
     favorites: createInMemoryFavoritesReader(favoritesByUser),
     users: createInMemoryUserReader([ALICE, BOB, CHAI, DAN, FAH, HANA]),
     notifier: {
-      async messageSent(message) {
+      messageSent(message) {
         notified.push(message);
+        return Promise.resolve();
       },
     },
     now: clock.now,
@@ -189,7 +190,7 @@ export async function seedThread(
     const stored = await repository.insertMessage({
       senderId: isFromA ? userA : userB,
       receiverId: isFromA ? userB : userA,
-      text: `Message ${index + 1}`,
+      text: `Message ${String(index + 1)}`,
       sentAt: new Date(threadNow - (count - 1 - index) * ONE_MINUTE_MS),
       replyToMessageId: null,
     });

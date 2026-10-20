@@ -132,10 +132,14 @@ function parseRecommendations(body: unknown): EngineRecommendation[] {
     const userId = readText(item, "userId", "user_id");
     const matchScore = readNumber(item, "matchScore", "match_score");
     const unitScore = readNumber(item, "score");
-    if (userId === undefined || (matchScore === undefined && unitScore === undefined)) {
+    if (userId === undefined) {
       throw unavailable();
     }
-    const score = matchScore ?? (unitScore as number) * MAX_SCORE;
+    // The engine answers either a 0 to 100 score or a 0 to 1 score.
+    const score = matchScore ?? (unitScore === undefined ? undefined : unitScore * MAX_SCORE);
+    if (score === undefined) {
+      throw unavailable();
+    }
     return {
       userId,
       score: Math.min(MAX_SCORE, Math.max(0, score)),
@@ -172,7 +176,7 @@ export function createMatchEngineClient(options: MatchEngineClientOptions): Matc
         signal: AbortSignal.timeout(options.timeoutMs),
       });
       if (!response.ok) {
-        throw new Error(`Match Engine answered ${response.status}`);
+        throw new Error(`Match Engine answered ${String(response.status)}`);
       }
       return await response.json();
     } catch (error) {

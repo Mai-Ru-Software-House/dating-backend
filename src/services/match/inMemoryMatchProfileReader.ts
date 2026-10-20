@@ -13,12 +13,14 @@ export function createInMemoryMatchProfileReader(
   profiles: MatchProfile[] = [],
 ): MatchProfileReader {
   return {
-    async findProfile(userId) {
-      return profiles.find((profile) => profile.userId === userId) ?? null;
+    findProfile(userId) {
+      return Promise.resolve(profiles.find((profile) => profile.userId === userId) ?? null);
     },
 
-    async listPool(excludeUserId, limit) {
-      return profiles.filter((profile) => profile.userId !== excludeUserId).slice(0, limit);
+    listPool(excludeUserId, limit) {
+      return Promise.resolve(
+        profiles.filter((profile) => profile.userId !== excludeUserId).slice(0, limit),
+      );
     },
   };
 }
