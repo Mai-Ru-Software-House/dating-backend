@@ -38,18 +38,19 @@ export function createInMemoryAuthRepository(): InMemoryAuthRepository {
       return [...tokens.values()].filter((token) => token.revokedAt === null).length;
     },
 
-    async findCredentialsByUsername(username) {
-      return users.get(username) ?? null;
+    findCredentialsByUsername(username) {
+      return Promise.resolve(users.get(username) ?? null);
     },
 
-    async insertRefreshToken(token) {
+    insertRefreshToken(token) {
       tokens.set(token.tokenHash, { ...token, revokedAt: null });
+      return Promise.resolve();
     },
 
-    async rotateRefreshToken(oldTokenHash, replacement, now) {
+    rotateRefreshToken(oldTokenHash, replacement, now) {
       const old = tokens.get(oldTokenHash);
-      if (old === undefined || old.revokedAt !== null || old.expiresAt <= now) {
-        return null;
+      if (old?.revokedAt !== null || old.expiresAt <= now) {
+        return Promise.resolve(null);
       }
       old.revokedAt = now;
       tokens.set(replacement.tokenHash, {
@@ -58,22 +59,24 @@ export function createInMemoryAuthRepository(): InMemoryAuthRepository {
         expiresAt: replacement.expiresAt,
         revokedAt: null,
       });
-      return old.userId;
+      return Promise.resolve(old.userId);
     },
 
-    async revokeRefreshToken(userId, tokenHash, now) {
+    revokeRefreshToken(userId, tokenHash, now) {
       const token = tokens.get(tokenHash);
-      if (token !== undefined && token.userId === userId && token.revokedAt === null) {
+      if (token?.userId === userId && token.revokedAt === null) {
         token.revokedAt = now;
       }
+      return Promise.resolve();
     },
 
-    async revokeAllRefreshTokens(userId, now) {
+    revokeAllRefreshTokens(userId, now) {
       for (const token of tokens.values()) {
         if (token.userId === userId && token.revokedAt === null) {
           token.revokedAt = now;
         }
       }
+      return Promise.resolve();
     },
   };
 }

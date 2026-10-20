@@ -50,10 +50,10 @@ describe.skipIf(!hasTestDatabase)("sign up on PostgreSQL", () => {
       profiles: createPrismaProfileRepository(prisma),
       hasher: cheapHasher,
       auth,
-      places: { findPlaceName: async () => "Bangkok, Pathum Wan" },
+      places: { findPlaceName: () => Promise.resolve("Bangkok, Pathum Wan") },
       photoUploads,
       favorites: createInMemoryFavoritesReader(),
-      scorer: { scoreCandidate: async () => NO_MATCH_SCORE },
+      scorer: { scoreCandidate: () => Promise.resolve(NO_MATCH_SCORE) },
       now: () => NOW,
     });
     return { auth, service };

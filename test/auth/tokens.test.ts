@@ -49,7 +49,7 @@ describe("access tokens", () => {
   it("rejects a token whose payload was changed", async () => {
     const { tokens } = setup();
     const token = await tokens.signAccessToken("usr_alice");
-    const [header, , signature] = token.split(".");
+    const [header = "", , signature = ""] = token.split(".");
     const forgedPayload = Buffer.from(JSON.stringify({ sub: "usr_bob", exp: 9999999999 })).toString(
       "base64url",
     );

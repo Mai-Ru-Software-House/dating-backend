@@ -18,6 +18,18 @@ const HTTP_UNAUTHORIZED = 401;
 const HTTP_NOT_FOUND = 404;
 const HTTP_CONFLICT = 409;
 
+/** The JSON fields these tests read. Each route answers only some of them. */
+interface ResponseBody {
+  error: { code: string; message: string; field: string };
+  accessToken: string;
+  refreshToken: string;
+  profile: unknown;
+  displayName: string;
+  matchScore: unknown;
+  dateOfBirth: unknown;
+  location: unknown;
+}
+
 async function setup() {
   const { service, auth } = await createTestProfiles();
   const tokens: Record<string, string> = { "alice-token": ALICE.userId };
@@ -44,7 +56,10 @@ async function setup() {
       }),
     );
     const text = await response.text();
-    return { status: response.status, body: text === "" ? undefined : JSON.parse(text) };
+    return {
+      status: response.status,
+      body: (text === "" ? undefined : JSON.parse(text)) as ResponseBody,
+    };
   }
   return { call };
 }
@@ -52,11 +67,13 @@ async function setup() {
 describe("GET /usernames/{username}", () => {
   it("needs no session and answers isAvailable", async () => {
     const { call } = await setup();
-    expect(await call("GET", "/api/v1/usernames/mint_01")).toEqual({
+    expect((await call("GET", "/api/v1/usernames/mint_01")) as unknown).toEqual({
       status: HTTP_OK,
       body: { isAvailable: true },
     });
-    expect((await call("GET", "/api/v1/usernames/Alice")).body).toEqual({ isAvailable: false });
+    expect((await call("GET", "/api/v1/usernames/Alice")).body as unknown).toEqual({
+      isAvailable: false,
+    });
   });
 
   it("answers 400 INVALID_INPUT with field username for a bad format", async () => {
@@ -77,7 +94,7 @@ describe("POST /users", () => {
     expect(created.body.profile).toMatchObject({ username: "mint_01", displayName: "Mint" });
 
     const me = await call("GET", "/api/v1/users/me", created.body.accessToken);
-    expect(me).toEqual({ status: HTTP_OK, body: created.body.profile });
+    expect(me as unknown).toEqual({ status: HTTP_OK, body: created.body.profile });
   });
 
   it("CP04: answers 409 USERNAME_TAKEN for a taken username", async () => {

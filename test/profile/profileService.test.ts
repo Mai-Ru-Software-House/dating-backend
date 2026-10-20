@@ -17,6 +17,7 @@ import {
   TURNS_18_TODAY,
   TURNS_18_TOMORROW,
 } from "./fixtures";
+import { rejectionOf } from "../rejection";
 
 const HTTP_BAD_REQUEST = 400;
 const HTTP_UNAUTHORIZED = 401;
@@ -80,7 +81,7 @@ describe("signUp", () => {
     const [photoKey] = photoUploads.listProfilePhotoKeys();
     expect(photoKey).toMatch(/^profile-photos\/[0-9a-f-]{36}\.jpg$/);
     expect(result.profile.photoUrl).toBe(
-      `/api/v1/photos/${photoKey?.slice("profile-photos/".length, -".jpg".length)}`,
+      `/api/v1/photos/${photoKey?.slice("profile-photos/".length, -".jpg".length) ?? ""}`,
     );
     expect(photoUploads.hasUpload(MINT_UPLOAD_ID)).toBe(false);
   });
@@ -171,7 +172,7 @@ describe("signUp", () => {
     expect(hash?.startsWith("$argon2id$")).toBe(true);
     expect(hash).not.toContain("Mint2026");
     expect((await auth.repository.findCredentialsByUsername("mint_01"))?.passwordHash).toBe(
-      hash as string,
+      hash ?? "",
     );
   });
 
@@ -374,10 +375,10 @@ describe("signUp", () => {
 
   it("removes the prepared photo and keeps the upload when saving fails", async () => {
     const { service, profiles, photoUploads } = await createTestProfiles();
-    profiles.createProfile = async () => {
-      throw new Error("The database is down.");
-    };
-    await expect(service.signUp(mintSignUp())).rejects.toThrow("The database is down.");
+    profiles.createProfile = () => Promise.reject(new Error("The database is down."));
+    expect(String(await rejectionOf(service.signUp(mintSignUp())))).toContain(
+      "The database is down.",
+    );
     expect(photoUploads.listProfilePhotoKeys()).toEqual([]);
     expect(photoUploads.hasUpload(MINT_UPLOAD_ID)).toBe(true);
   });

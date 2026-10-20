@@ -15,6 +15,7 @@ import {
   startUploadSweep,
   UPLOAD_SWEEP_INTERVAL_MS,
 } from "../../src/services/photo/photoUploads";
+import { rejectionOf } from "../rejection";
 
 const MS_PER_HOUR = 3_600_000;
 const MS_PER_SECOND = 1_000;
@@ -64,9 +65,9 @@ describe("saveUpload", () => {
 
     // The same upload seen through the other secret: its token does not match, so the delete
     // answers UPLOAD_NOT_FOUND. The right secret still works.
-    await expect(
-      withSecretTwo.deleteUpload(upload.uploadId, upload.deleteToken),
-    ).rejects.toMatchObject({ status: 404, code: "UPLOAD_NOT_FOUND" });
+    expect(
+      await rejectionOf(withSecretTwo.deleteUpload(upload.uploadId, upload.deleteToken)),
+    ).toMatchObject({ status: 404, code: "UPLOAD_NOT_FOUND" });
     await withSecretOne.deleteUpload(upload.uploadId, upload.deleteToken);
     expect(store.listKeys()).toEqual([]);
   });
@@ -88,7 +89,7 @@ describe("deleteUpload", () => {
     const { uploads } = createUploads(clock);
     const upload = await uploads.saveUpload(new Uint8Array([1]), "image/jpeg");
 
-    await expect(uploads.deleteUpload(upload.uploadId, "0".repeat(64))).rejects.toMatchObject({
+    expect(await rejectionOf(uploads.deleteUpload(upload.uploadId, "0".repeat(64)))).toMatchObject({
       status: 404,
       code: "UPLOAD_NOT_FOUND",
     });
@@ -97,7 +98,7 @@ describe("deleteUpload", () => {
   it("answers UPLOAD_NOT_FOUND for an unknown or non-UUID ID", async () => {
     const clock = createClock();
     const { uploads } = createUploads(clock);
-    await expect(uploads.deleteUpload("nope", "0".repeat(64))).rejects.toMatchObject({
+    expect(await rejectionOf(uploads.deleteUpload("nope", "0".repeat(64)))).toMatchObject({
       status: 404,
       code: "UPLOAD_NOT_FOUND",
     });
@@ -109,7 +110,9 @@ describe("deleteUpload", () => {
     const upload = await uploads.saveUpload(new Uint8Array([1]), "image/jpeg");
     clock.advance(MS_PER_HOUR + MS_PER_SECOND);
 
-    await expect(uploads.deleteUpload(upload.uploadId, upload.deleteToken)).rejects.toMatchObject({
+    expect(
+      await rejectionOf(uploads.deleteUpload(upload.uploadId, upload.deleteToken)),
+    ).toMatchObject({
       status: 404,
       code: "UPLOAD_NOT_FOUND",
     });
@@ -158,9 +161,11 @@ describe("the claimer sign up uses", () => {
     const { uploads, store } = createUploads(clock);
     const upload = await uploads.saveUpload(new Uint8Array([1]), "image/jpeg");
     const prepared = await uploads.claimer.prepareProfilePhoto(upload.uploadId);
-    expect(prepared).not.toBeNull();
+    if (prepared === null) {
+      throw new Error("The upload was not claimed.");
+    }
 
-    await uploads.claimer.cancelClaim(prepared!.photoKey);
+    await uploads.claimer.cancelClaim(prepared.photoKey);
     expect(store.listKeys()).toEqual([`uploads/${upload.uploadId}.jpg`]);
   });
 });

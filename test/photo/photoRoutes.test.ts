@@ -42,6 +42,17 @@ async function widePng(): Promise<Uint8Array<ArrayBuffer>> {
   return bytes;
 }
 
+/** The JSON fields these tests read. Each route answers only some of them. */
+interface ResponseBody {
+  uploadId: string;
+  expiresAt: string;
+  deleteToken: string;
+  photoUrl: string;
+  accessToken: string;
+  profile: { photoUrl: string };
+  error: { code: string; message: string; field: string };
+}
+
 function createClock() {
   let moment = new Date("2026-10-10T10:00:00Z");
   return {
@@ -80,8 +91,8 @@ async function setup() {
     },
   };
   const places = {
-    async findPlaceName(): Promise<string | null> {
-      return "Bangkok, Pathum Wan";
+    findPlaceName(): Promise<string | null> {
+      return Promise.resolve("Bangkok, Pathum Wan");
     },
   };
 
@@ -130,7 +141,10 @@ async function setup() {
       new Request(`http://localhost${path}`, { method, headers, body: form }),
     );
     const text = await response.text();
-    return { status: response.status, body: text === "" ? undefined : JSON.parse(text) };
+    return {
+      status: response.status,
+      body: (text === "" ? undefined : JSON.parse(text)) as ResponseBody,
+    };
   }
 
   /** Send a request with the given headers and an optional JSON body. */
@@ -151,7 +165,10 @@ async function setup() {
       }),
     );
     const text = await response.text();
-    return { status: response.status, body: text === "" ? undefined : JSON.parse(text) };
+    return {
+      status: response.status,
+      body: (text === "" ? undefined : JSON.parse(text)) as ResponseBody,
+    };
   }
 
   /** Send a request as a logged in user. */
@@ -168,7 +185,7 @@ describe("POST /photo-uploads", () => {
     const png = await widePng();
     const response = await ctx.upload("/api/v1/photo-uploads", png);
     expect(response.status).toBe(201);
-    const uploadId = response.body.uploadId as string;
+    const uploadId = response.body.uploadId;
     expect(uploadId).toMatch(/^[0-9a-f-]{36}$/);
     // The 400x300 PNG comes back as a 300x300 JPEG: cropped, re-encoded, one hour from now.
     expect(response.body.expiresAt).toBe("2026-10-10T11:00:00.000Z");
@@ -178,7 +195,7 @@ describe("POST /photo-uploads", () => {
       [`uploads/${uploadId}.jpg`, "profile-photos/pho_old.jpg"].sort(),
     );
     const stored = await ctx.store.getPhoto(`uploads/${uploadId}.jpg`);
-    const meta = await sharp(stored!.bytes).metadata();
+    const meta = await sharp(stored?.bytes).metadata();
     expect(meta.format).toBe("jpeg");
     expect(meta.width).toBe(300);
     expect(meta.height).toBe(300);
@@ -249,14 +266,15 @@ describe("PUT /users/me/photo", () => {
     const png = await widePng();
     const response = await ctx.upload("/api/v1/users/me/photo", png, "alice-token", "PUT");
     expect(response.status).toBe(200);
-    const photoUrl = response.body.photoUrl as string;
+    const photoUrl = response.body.photoUrl;
     expect(photoUrl).toMatch(/^\/api\/v1\/photos\/[0-9a-f-]{36}$/);
-    const newKey = `profile-photos/${photoUrl.split("/").pop()}.jpg`;
+    const photoId = photoUrl.split("/").pop() ?? "";
+    const newKey = `profile-photos/${photoId}.jpg`;
 
     expect(ctx.store.listKeys()).toEqual([newKey]); // the old object is gone
-    expect(await ctx.photos.findPhotoKeyByPhotoId(photoUrl.split("/").pop()!)).toBe(newKey);
+    expect(await ctx.photos.findPhotoKeyByPhotoId(photoId)).toBe(newKey);
     const stored = await ctx.store.getPhoto(newKey);
-    const meta = await sharp(stored!.bytes).metadata();
+    const meta = await sharp(stored?.bytes).metadata();
     expect(meta.format).toBe("jpeg");
     expect(meta.width).toBe(300);
   });
@@ -312,7 +330,7 @@ describe("the full sign up flow", () => {
     // token the sign up answered.
     expect(ctx.store.listKeys()).toHaveLength(2);
     expect(ctx.store.listKeys()).toContain(
-      `profile-photos/${created.body.profile.photoUrl.split("/").pop()}.jpg`,
+      `profile-photos/${created.body.profile.photoUrl.split("/").pop() ?? ""}.jpg`,
     );
     expect(ctx.store.listKeys()).not.toContain(`uploads/${uploaded.body.uploadId}.jpg`);
     const me = await ctx.callAs("GET", "/api/v1/users/me", created.body.accessToken);

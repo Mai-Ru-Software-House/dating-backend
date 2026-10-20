@@ -86,16 +86,18 @@ function createFakePlaces() {
   return {
     calls,
     state,
-    async findPlaceName(lat: number, lon: number): Promise<string | null> {
+    findPlaceName(lat: number, lon: number): Promise<string | null> {
       calls.push({ lat, lon });
       if (state.isDown) {
-        throw new ApiError(
-          HTTP_INTERNAL_ERROR,
-          ERROR_CODES.geocoderUnavailable,
-          "Nominatim did not answer.",
+        return Promise.reject(
+          new ApiError(
+            HTTP_INTERNAL_ERROR,
+            ERROR_CODES.geocoderUnavailable,
+            "Nominatim did not answer.",
+          ),
         );
       }
-      return state.placeName;
+      return Promise.resolve(state.placeName);
     },
   };
 }
@@ -125,8 +127,9 @@ export async function createTestProfiles() {
   };
   const places = createFakePlaces();
   const photoUploads = createInMemoryPhotoUploadClaimer({ now: () => NOW });
-  const addUpload = (uploadId: string) =>
+  const addUpload = (uploadId: string) => {
     photoUploads.addUpload(uploadId, "jpg", new Date(NOW.getTime() + MS_PER_HOUR));
+  };
   addUpload(MINT_UPLOAD_ID);
   const engine = createFakeEngine();
   const service = createProfileService({

@@ -21,6 +21,20 @@ const NO_SUCH_USER = "99999";
 const NO_SUCH_NOTE = "999999";
 const NO_SUCH_UUID = "00000000-0000-7000-8000-000000000000";
 
+/**
+ * Give a value that a test needs, or fail the test with a clear message.
+ * @param value - the value, possibly missing
+ * @param what - what the value is, for the failure message
+ * @returns the value
+ * @throws Error when the value is missing
+ */
+function required<T>(value: T | undefined, what: string): T {
+  if (value === undefined) {
+    throw new Error(`The test needs ${what}, but it is missing.`);
+  }
+  return value;
+}
+
 /** A moment `minutes` after T0. */
 function at(minutes: number): Date {
   return new Date(T0 + minutes * MINUTE_MS);
@@ -131,11 +145,11 @@ export function describeMessageRepository(setup: () => Promise<MessageWorld>): v
     it("honours the page size, and pages back with `before`", async () => {
       const { repository, alice, bob } = await setup();
       for (let minute = 0; minute < 5; minute += 1) {
-        await repository.insertMessage(newMessage(alice, bob, `m${minute}`, minute));
+        await repository.insertMessage(newMessage(alice, bob, `m${String(minute)}`, minute));
       }
       const first = await repository.listConversationMessages(alice, bob, { limit: 2 });
       expect(first.map((message) => message.text)).toEqual(["m4", "m3"]);
-      const last = first[first.length - 1]!;
+      const last = required(first.at(-1), "the last message of the first page");
       const second = await repository.listConversationMessages(alice, bob, {
         limit: 2,
         before: { sentAt: last.sentAt, messageId: last.messageId },
@@ -147,9 +161,11 @@ export function describeMessageRepository(setup: () => Promise<MessageWorld>): v
       const { repository, alice, bob } = await setup();
       const stored = [];
       for (let minute = 0; minute < 5; minute += 1) {
-        stored.push(await repository.insertMessage(newMessage(alice, bob, `m${minute}`, minute)));
+        stored.push(
+          await repository.insertMessage(newMessage(alice, bob, `m${String(minute)}`, minute)),
+        );
       }
-      const position = stored[1]!;
+      const position = required(stored[1], "the second stored message");
       const page = await repository.listConversationMessages(alice, bob, {
         limit: 2,
         after: { sentAt: position.sentAt, messageId: position.messageId },
@@ -199,7 +215,7 @@ export function describeMessageRepository(setup: () => Promise<MessageWorld>): v
       expect(
         (await repository.listUnreadForReceiver(alice, { limit: 1 })).map((m) => m.text),
       ).toEqual(["new"]);
-      const newest = unread[0]!;
+      const newest = required(unread[0], "the newest unread message");
       const older = await repository.listUnreadForReceiver(alice, {
         limit: 10,
         before: { sentAt: newest.sentAt, messageId: newest.messageId },
@@ -467,8 +483,9 @@ export function describeUserReader(setup: () => Promise<UsersWorld>): void {
       const found = await reader.findUserSummaries([alice, bob]);
       expect(found).toHaveLength(2);
       for (const summary of found) {
-        expect(summary.displayName).toBe(expected[summary.userId]?.displayName as string);
-        expect(summary.photoUrl).toBe(expected[summary.userId]?.photoUrl as string);
+        const wanted = required(expected[summary.userId], "the expected summary of the user");
+        expect(summary.displayName).toBe(wanted.displayName);
+        expect(summary.photoUrl).toBe(wanted.photoUrl);
         expect(summary.photoUrl.startsWith("/api/v1/photos/")).toBe(true);
       }
     });

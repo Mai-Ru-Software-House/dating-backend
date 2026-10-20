@@ -19,7 +19,7 @@ export function createPrismaAuthRepository(prisma: PrismaClient): AuthRepository
         where: { authType: PASSWORD_AUTH_TYPE, passwordHash: { not: null }, user: { username } },
         select: { userId: true, passwordHash: true },
       });
-      if (method === null || method.passwordHash === null) {
+      if (method?.passwordHash === null || method === null) {
         return null;
       }
       return { userId: method.userId, passwordHash: method.passwordHash };

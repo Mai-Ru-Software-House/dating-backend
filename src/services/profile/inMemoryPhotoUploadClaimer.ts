@@ -58,22 +58,24 @@ export function createInMemoryPhotoUploadClaimer(
       return [...profilePhotos].sort();
     },
 
-    async prepareProfilePhoto(uploadId) {
+    prepareProfilePhoto(uploadId) {
       const upload = uploads.get(uploadId);
       if (upload === undefined || upload.expiresAt <= now()) {
-        return null;
+        return Promise.resolve(null);
       }
       const photoKey = profilePhotoKey(Bun.randomUUIDv7(), upload.extension);
       profilePhotos.add(photoKey);
-      return { photoKey };
+      return Promise.resolve({ photoKey });
     },
 
-    async finishClaim(uploadId) {
+    finishClaim(uploadId) {
       uploads.delete(uploadId);
+      return Promise.resolve();
     },
 
-    async cancelClaim(photoKey) {
+    cancelClaim(photoKey) {
       profilePhotos.delete(photoKey);
+      return Promise.resolve();
     },
   };
 }
