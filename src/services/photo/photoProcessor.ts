@@ -1,7 +1,7 @@
 /*
  * Photo functions (Tae): the check and transform every profile photo goes through before it is
  * stored in RustFS. The rules (test plan A5, docs/api-contract.md): the file is png, jpg, jpeg or
- * webp and at most 1 MB. A photo that is not 1:1 is center-cropped to a square. The stored result
+ * webp and at most 5 MB. A photo that is not 1:1 is center-cropped to a square. The stored result
  * is always a JPEG of at most 1024 pixels per side, so a stored photo is always square and small.
  */
 import sharp, { type Metadata } from "sharp";
@@ -9,9 +9,9 @@ import { ApiError, ERROR_CODES } from "../../plugins/errors";
 
 const HTTP_BAD_REQUEST = 400;
 
-/** A5: the uploaded photo is at most 1 MB (checked before any processing). */
-const MAX_PHOTO_BYTES = 1_000_000;
-const SIZE_RULE = `The photo is too large. A photo can be at most 1 MB.`;
+/** A5: the uploaded photo is at most 5 MB (checked before any processing). */
+const MAX_PHOTO_BYTES = 5_000_000;
+const SIZE_RULE = `The photo is too large. A photo can be at most 5 MB.`;
 
 /** The stored JPEG never has an edge longer than this. Smaller photos are not enlarged. */
 const MAX_PHOTO_EDGE = 1024;

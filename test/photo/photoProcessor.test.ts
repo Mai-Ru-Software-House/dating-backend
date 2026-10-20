@@ -207,8 +207,8 @@ describe("processProfilePhoto", () => {
     expect(meta.height).toBe(100);
   });
 
-  it("rejects a file over 1 MB before it reads the image", async () => {
-    const error = await processProfilePhoto(new Uint8Array(1_000_001).fill(1)).catch(
+  it("rejects a file over 5 MB before it reads the image", async () => {
+    const error = await processProfilePhoto(new Uint8Array(5_000_001).fill(1)).catch(
       (thrown: unknown) => thrown,
     );
 
@@ -217,7 +217,7 @@ describe("processProfilePhoto", () => {
     expect(apiError.status).toBe(400);
     expect(apiError.code).toBe("INVALID_INPUT");
     expect(apiError.field).toBe("photo");
-    expect(apiError.message).toContain("1 MB");
+    expect(apiError.message).toContain("5 MB");
   });
 
   it("rejects a file that is not a readable image", async () => {

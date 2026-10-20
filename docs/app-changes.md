@@ -23,7 +23,7 @@ For Tee. Only row 8 needs an app change; the other rows are information. The bac
 
 - Username 4 to 20 letters, digits and underscore (case does not matter). Password at least 8 characters with a letter and a digit.
 - Date of birth: a real date, not in the future, age at least 18.
-- Photo: png, jpg, jpeg or webp, at most 1 MB. A photo that is not 1:1 is center-cropped to a square, so the app may send any aspect ratio. Each failed rule has its own message in `error.message`, with `field` `photo`.
+- Photo: png, jpg, jpeg or webp, at most 5 MB. A photo that is not 1:1 is center-cropped to a square, so the app may send any aspect ratio. Each failed rule has its own message in `error.message`, with `field` `photo`.
 - Message 1 to 1000 characters, note 1 to 500 characters, counted after trimming spaces.
 - Search: `minAge` at least 18 and not above `maxAge`, `maxDistanceKm` above 0.
 

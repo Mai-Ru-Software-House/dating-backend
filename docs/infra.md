@@ -61,7 +61,7 @@ Nothing. The backend pushes the candidates in each request (`docs/match-engine.m
 
 - Image name `ghcr.io/mai-ru-software-house/dating-backend`. Infra picks the tag with `BACKEND_IMAGE` (dev uses `:dev`).
 - This repo has a `Dockerfile` and a GitHub Actions workflow. Every push to `main` and `feat/**` builds an image tagged with the commit hash. Only `main` moves `:dev`, so Watchtower never follows a feature branch.
-- The server stops cleanly when Docker sends `SIGTERM` (it finishes the requests in progress and closes the database). It refuses a request body over 2 MiB.
+- The server stops cleanly when Docker sends `SIGTERM` (it finishes the requests in progress and closes the database). It refuses a request body over 6 MiB.
 - On start the container runs `bun run db:deploy` (applies pending migrations), then the server. The database now has two migrations (the second replaced the gender `other` with `prefer_not_to_say` and made `users.photo_key` unique). The schema owner (Chuan) and Tae should agree whether migrations run automatically like this, or only by hand.
 - The generated Prisma client is committed in `src/generated`, so the build runs no `prisma generate`.
 
@@ -69,7 +69,7 @@ Nothing. The backend pushes the candidates in each request (`docs/match-engine.m
 
 - Dev: one rule sends every path to `http://api:3000`. Prod: only `/api/` is proxied, `/internal/` answers 404, and it listens on port 80 (HTTPS is not configured yet).
 - Nginx sets `X-Real-IP` and `X-Forwarded-For`. Per client limits should use `X-Real-IP`.
-- **Request to Tae:** `client_max_body_size` is not set, so Nginx refuses any request over its default of 1 MB with its own HTML 413. A photo upload of 1 MB plus the multipart overhead is larger than that, and the test plan expects our own message for a photo over 1 MB (CP20). Please set `client_max_body_size 2m;` in both Nginx files.
+- **Request to Tae:** `client_max_body_size` is not set, so Nginx refuses any request over its default of 1 MB with its own HTML 413. A photo upload of 5 MB plus the multipart overhead is larger than that, and the test plan expects our own message for a photo over 5 MB (CP20). Please set `client_max_body_size 6m;` in both Nginx files.
 
 ## Keep in sync
 
