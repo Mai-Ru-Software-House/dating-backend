@@ -64,7 +64,7 @@ export function photoRoutes(service: PhotoService, validateSession: SessionValid
         detail: {
           summary: "Upload a profile photo before sign up",
           description:
-            "Kept one hour under a temporary key. Rules: png, jpg, jpeg or webp, at most 1 MB; a photo that is not 1:1 is center-cropped to a square.",
+            "Kept one hour under a temporary key. Rules: png, jpg, jpeg or webp, at most 5 MB; a photo that is not 1:1 is center-cropped to a square.",
           tags: TAGS,
         },
       },

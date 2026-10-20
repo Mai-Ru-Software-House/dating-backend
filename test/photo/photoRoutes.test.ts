@@ -198,9 +198,9 @@ describe("POST /photo-uploads", () => {
     expect(response.body.error).toMatchObject({ code: "INVALID_INPUT", field: "photo" });
   });
 
-  it("answers 400 with field photo for a file over 1 MB", async () => {
+  it("answers 400 with field photo for a file over 5 MB", async () => {
     const ctx = await setup();
-    const tooBig = new Uint8Array(1_000_001);
+    const tooBig = new Uint8Array(5_000_001);
     const response = await ctx.upload("/api/v1/photo-uploads", tooBig);
     expect(response.status).toBe(400);
     expect(response.body.error).toMatchObject({ code: "INVALID_INPUT", field: "photo" });

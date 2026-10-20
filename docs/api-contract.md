@@ -46,7 +46,7 @@ The photo routes are built (Tae): the temporary upload lives in RustFS under `up
 - **Paging:** message lists take `limit` and `before` and return `hasMore`. Recommendations take `limit` and `offset`. Chat list, favorites and notes are not paged.
 - **Photos.** A user card carries `photoUrl`, the path `/api/v1/photos/{photoId}`. The app adds the session header when it loads it. At sign up the photo is uploaded first (`POST /photo-uploads`) and the sign up carries its `photoUploadId` (the flow of the app, agreed with Tee on 9 October).
 - **Privacy.** A response never contains a password hash, or another user's date of birth, exact location, favorites or notes. Other users are shown with `age`, `placeName` and `distanceKm` only.
-- **Rules from the functional test plan (A1 to A8):** username 4 to 20 letters, digits and underscore, stored in lowercase, so "Alice" and "alice" are one name; password at least 8 characters with a letter and a digit, hashed with Argon2id; minimum age 18; profile photo png, jpg, jpeg or webp, at most 1 MB; a photo that is not 1:1 is center-cropped to a square; message 1 to 1000 characters; note 1 to 500 characters (after trimming, counted as Unicode characters); if the place lookup fails, the profile is still saved with no place name.
+- **Rules from the functional test plan (A1 to A8):** username 4 to 20 letters, digits and underscore, stored in lowercase, so "Alice" and "alice" are one name; password at least 8 characters with a letter and a digit, hashed with Argon2id; minimum age 18; profile photo png, jpg, jpeg or webp, at most 5 MB; a photo that is not 1:1 is center-cropped to a square; message 1 to 1000 characters; note 1 to 500 characters (after trimming, counted as Unicode characters); if the place lookup fails, the profile is still saved with no place name.
 
 ### Error codes
 
@@ -250,7 +250,7 @@ Response `200`: a `CandidateCard` (with `matchScore`), plus:
 
 Status: not built (Tae). Session: **none** (the user has no account yet during Create Profile).
 
-Body: `multipart/form-data`, one file part named `photo`. Rules: png, jpg, jpeg or webp, at most 1 MB. A photo that is not 1:1 is center-cropped to a square, and the photo that is stored is a JPEG of at most 1024 pixels per side. `400 INVALID_INPUT` with `field` `photo` and a message that names the failed rule (formats, size, missing). Nothing is stored when a rule fails.
+Body: `multipart/form-data`, one file part named `photo`. Rules: png, jpg, jpeg or webp, at most 5 MB. A photo that is not 1:1 is center-cropped to a square, and the photo that is stored is a JPEG of at most 1024 pixels per side. `400 INVALID_INPUT` with `field` `photo` and a message that names the failed rule (formats, size, missing). Nothing is stored when a rule fails.
 
 Response `201`:
 

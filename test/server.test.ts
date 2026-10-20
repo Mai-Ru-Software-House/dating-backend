@@ -38,8 +38,8 @@ describe("request size limit", () => {
     await app.stop();
   });
 
-  it("is 2 MiB, enough for a 1 MB photo with its form overhead", () => {
-    expect(MAX_REQUEST_BODY_BYTES).toBe(2 * ONE_MEGABYTE);
+  it("is 6 MiB, enough for a 5 MB photo with its form overhead", () => {
+    expect(MAX_REQUEST_BODY_BYTES).toBe(6 * ONE_MEGABYTE);
   });
 
   it("accepts a normal request", async () => {
