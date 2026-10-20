@@ -1,0 +1,508 @@
+Tool: ESLint v10.12.0 with typescript-eslint strictTypeChecked + stylisticTypeChecked
+Config: eslint.quality.config.js
+Command: bun run lint:quality
+Base commit: 65c66aa (feat: raise the photo size limit to 5 MB (#12))
+Run: 1 (before any fixes)
+------------------------------------------------------------
+$ eslint -c eslint.quality.config.js .
+
+prisma\seed.ts
+  277:17  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+  280:24  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+  280:40  error  Invalid type "60" of template literal expression      @typescript-eslint/restrict-template-expressions
+  404:10  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+  421:14  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+  421:42  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+  422:10  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+  422:48  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+
+src\config\env.ts
+  105:53  error  Prefer using nullish coalescing operator (`??`) instead of a logical or (`||`), as it is a safer operator  @typescript-eslint/prefer-nullish-coalescing
+  116:46  error  Invalid type "65535" of template literal expression                                                        @typescript-eslint/restrict-template-expressions
+
+src\data\prismaAuthRepository.ts
+  22:11  error  Prefer using an optional chain expression instead, as it's more concise and easier to read  @typescript-eslint/prefer-optional-chain
+
+src\index.ts
+  49:81  error  Invalid type "number" of template literal expression              @typescript-eslint/restrict-template-expressions
+  62:47  error  Invalid type "string | undefined" of template literal expression  @typescript-eslint/restrict-template-expressions
+  62:71  error  Invalid type "number | undefined" of template literal expression  @typescript-eslint/restrict-template-expressions
+
+src\plugins\session.ts
+  16:7  error  Prefer using an optional chain expression instead, as it's more concise and easier to read  @typescript-eslint/prefer-optional-chain
+
+src\services\auth\inMemoryAuthRepository.ts
+  41:5   error  Async method 'findCredentialsByUsername' has no 'await' expression                          @typescript-eslint/require-await
+  45:5   error  Async method 'insertRefreshToken' has no 'await' expression                                 @typescript-eslint/require-await
+  49:5   error  Async method 'rotateRefreshToken' has no 'await' expression                                 @typescript-eslint/require-await
+  51:11  error  Prefer using an optional chain expression instead, as it's more concise and easier to read  @typescript-eslint/prefer-optional-chain
+  64:5   error  Async method 'revokeRefreshToken' has no 'await' expression                                 @typescript-eslint/require-await
+  66:11  error  Prefer using an optional chain expression instead, as it's more concise and easier to read  @typescript-eslint/prefer-optional-chain
+  71:5   error  Async method 'revokeAllRefreshTokens' has no 'await' expression                             @typescript-eslint/require-await
+
+src\services\favoritesNotes\favoritesNotesService.ts
+  150:8   error  Using the spread operator on a string can mishandle special characters, as can `.split("")`.
+- `...` produces Unicode code points, which will decompose complex emojis into individual emojis
+- .split("") produces UTF-16 code units, which breaks rich characters in many languages
+Consider using `Intl.Segmenter` for locale-aware string decomposition.
+Otherwise, if you don't need to preserve emojis or other non-Ascii characters, disable this lint rule on this line or configure the 'allow' rule option  @typescript-eslint/no-misused-spread
+  151:61  error  Invalid type "500" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/restrict-template-expressions
+
+src\services\favoritesNotes\inMemoryFavoritesNotesRepository.ts
+   39:5  error  Async method 'addFavorite' has no 'await' expression          @typescript-eslint/require-await
+   49:5  error  Async method 'removeFavorite' has no 'await' expression       @typescript-eslint/require-await
+   53:5  error  Async method 'listFavorites' has no 'await' expression        @typescript-eslint/require-await
+   57:5  error  Async method 'listFavoriteUserIds' has no 'await' expression  @typescript-eslint/require-await
+   92:5  error  Async method 'insertNote' has no 'await' expression           @typescript-eslint/require-await
+   96:5  error  Async method 'listNotesAbout' has no 'await' expression       @typescript-eslint/require-await
+  103:5  error  Async method 'listNotePeople' has no 'await' expression       @typescript-eslint/require-await
+  121:5  error  Async method 'updateNoteText' has no 'await' expression       @typescript-eslint/require-await
+  131:5  error  Async method 'deleteNote' has no 'await' expression           @typescript-eslint/require-await
+
+src\services\location\distance.ts
+  25:54  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+  25:72  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+
+src\services\location\locationRoutes.ts
+  32:41  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+  32:51  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+
+src\services\location\nominatimClient.ts
+  102:49  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+
+src\services\location\placeCache.ts
+  45:13  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+  45:37  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+
+src\services\location\rateLimiter.ts
+  10:26  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+
+src\services\match\engineClient.ts
+  138:34  error  Use a ! assertion to more succinctly remove null and undefined from the type  @typescript-eslint/non-nullable-type-assertion-style
+  175:50  error  Invalid type "number" of template literal expression                          @typescript-eslint/restrict-template-expressions
+
+src\services\match\inMemoryMatchProfileReader.ts
+  16:5  error  Async method 'findProfile' has no 'await' expression  @typescript-eslint/require-await
+  20:5  error  Async method 'listPool' has no 'await' expression     @typescript-eslint/require-await
+
+src\services\match\matchService.ts
+   95:71  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+   95:81  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+  165:62  error  Invalid type "-90" of template literal expression     @typescript-eslint/restrict-template-expressions
+  165:81  error  Invalid type "90" of template literal expression      @typescript-eslint/restrict-template-expressions
+  168:62  error  Invalid type "-180" of template literal expression    @typescript-eslint/restrict-template-expressions
+  168:82  error  Invalid type "180" of template literal expression     @typescript-eslint/restrict-template-expressions
+  186:58  error  Invalid type "18" of template literal expression      @typescript-eslint/restrict-template-expressions
+
+src\services\messaging\inMemoryMessageRepository.ts
+   77:5   error  Async method 'insertMessage' has no 'await' expression              @typescript-eslint/require-await
+   85:5   error  Async method 'findMessageById' has no 'await' expression            @typescript-eslint/require-await
+   90:5   error  Async method 'findMessagesByIds' has no 'await' expression          @typescript-eslint/require-await
+   95:5   error  Async method 'listConversationMessages' has no 'await' expression   @typescript-eslint/require-await
+  100:5   error  Async method 'listUnreadForReceiver' has no 'await' expression      @typescript-eslint/require-await
+  110:5   error  Async method 'listConversationSummaries' has no 'await' expression  @typescript-eslint/require-await
+  134:5   error  Async method 'markConversationRead' has no 'await' expression       @typescript-eslint/require-await
+  155:5   error  Async method 'listFavoriteUserIds' has no 'await' expression        @typescript-eslint/require-await
+  169:5   error  Async method 'findUserSummaries' has no 'await' expression          @typescript-eslint/require-await
+  180:23  error  Unexpected empty async method 'messageSent'                         @typescript-eslint/no-empty-function
+
+src\services\messaging\messagingService.ts
+  107:8   error  Using the spread operator on a string can mishandle special characters, as can `.split("")`.
+- `...` produces Unicode code points, which will decompose complex emojis into individual emojis
+- .split("") produces UTF-16 code units, which breaks rich characters in many languages
+Consider using `Intl.Segmenter` for locale-aware string decomposition.
+Otherwise, if you don't need to preserve emojis or other non-Ascii characters, disable this lint rule on this line or configure the 'allow' rule option  @typescript-eslint/no-misused-spread
+  110:44  error  Invalid type "1000" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/restrict-template-expressions
+  128:70  error  Invalid type "1" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/restrict-template-expressions
+  128:86  error  Invalid type "100" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/restrict-template-expressions
+
+src\services\photo\inMemoryPhotoStore.ts
+  38:5  error  Async method 'putPhoto' has no 'await' expression     @typescript-eslint/require-await
+  46:5  error  Async method 'getPhoto' has no 'await' expression     @typescript-eslint/require-await
+  54:5  error  Async method 'headPhoto' has no 'await' expression    @typescript-eslint/require-await
+  62:5  error  Async method 'deletePhoto' has no 'await' expression  @typescript-eslint/require-await
+  66:5  error  Async method 'copyPhoto' has no 'await' expression    @typescript-eslint/require-await
+  78:5  error  Async method 'listPhotos' has no 'await' expression   @typescript-eslint/require-await
+
+src\services\photo\inMemoryProfilePhotoRepository.ts
+  19:5  error  Async method 'findPhotoKeyByPhotoId' has no 'await' expression  @typescript-eslint/require-await
+  24:5  error  Async method 'replacePhotoKey' has no 'await' expression        @typescript-eslint/require-await
+
+src\services\photo\photoProcessor.ts
+   99:7   error  Unnecessary conditional, the types have no overlap  @typescript-eslint/no-unnecessary-condition
+   99:30  error  Unnecessary conditional, the types have no overlap  @typescript-eslint/no-unnecessary-condition
+  103:7   error  Unnecessary conditional, the types have no overlap  @typescript-eslint/no-unnecessary-condition
+
+src\services\photo\photoUploads.ts
+  106:16  error  Returning a void expression from an arrow function shorthand is forbidden. Please add braces to the arrow function  @typescript-eslint/no-confusing-void-expression
+
+src\services\profile\inMemoryPhotoUploadClaimer.ts
+  61:5  error  Async method 'prepareProfilePhoto' has no 'await' expression  @typescript-eslint/require-await
+  71:5  error  Async method 'finishClaim' has no 'await' expression          @typescript-eslint/require-await
+  75:5  error  Async method 'cancelClaim' has no 'await' expression          @typescript-eslint/require-await
+
+src\services\profile\inMemoryProfileRepository.ts
+   77:5  error  Async method 'listGenderCodes' has no 'await' expression  @typescript-eslint/require-await
+   81:5  error  Async method 'isUsernameTaken' has no 'await' expression  @typescript-eslint/require-await
+   87:5  error  Async method 'createProfile' has no 'await' expression    @typescript-eslint/require-await
+  104:5  error  Async method 'findProfileById' has no 'await' expression  @typescript-eslint/require-await
+  109:5  error  Async method 'updateProfile' has no 'await' expression    @typescript-eslint/require-await
+
+src\services\profile\profileRules.ts
+   22:35  error  Invalid type "8" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                       @typescript-eslint/restrict-template-expressions
+   50:11  error  Using the spread operator on a string can mishandle special characters, as can `.split("")`.
+- `...` produces Unicode code points, which will decompose complex emojis into individual emojis
+- .split("") produces UTF-16 code units, which breaks rich characters in many languages
+Consider using `Intl.Segmenter` for locale-aware string decomposition.
+Otherwise, if you don't need to preserve emojis or other non-Ascii characters, disable this lint rule on this line or configure the 'allow' rule option  @typescript-eslint/no-misused-spread
+   80:64  error  Invalid type "1000" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/restrict-template-expressions
+  101:44  error  Invalid type "50" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/restrict-template-expressions
+  132:58  error  Invalid type "18" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/restrict-template-expressions
+  161:64  error  Invalid type "-90" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/restrict-template-expressions
+  161:83  error  Invalid type "90" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/restrict-template-expressions
+  166:36  error  Invalid type "-180" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                    @typescript-eslint/restrict-template-expressions
+  166:56  error  Invalid type "180" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                     @typescript-eslint/restrict-template-expressions
+  176:10  error  Invalid type "string | undefined" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                      @typescript-eslint/restrict-template-expressions
+  176:65  error  Invalid type "number" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/restrict-template-expressions
+  176:75  error  Invalid type "number" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/restrict-template-expressions
+
+src\shutdown.ts
+  30:52  error  Returning a void expression from an arrow function shorthand is forbidden. Please add braces to the arrow function  @typescript-eslint/no-confusing-void-expression
+
+test\auth\tokens.test.ts
+  56:46  error  Invalid type "string | undefined" of template literal expression  @typescript-eslint/restrict-template-expressions
+  56:73  error  Invalid type "string | undefined" of template literal expression  @typescript-eslint/restrict-template-expressions
+
+test\favoritesNotes\favoritesNotesRoutes.test.ts
+   29:55  error  Async arrow function 'fakeValidator' has no 'await' expression      @typescript-eslint/require-await
+   57:39  error  Unsafe assignment of an `any` value                                 @typescript-eslint/no-unsafe-assignment
+   72:21  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+   74:17  error  Unsafe member access .favorites on an `any` value                   @typescript-eslint/no-unsafe-member-access
+   75:17  error  Unsafe member access .favorites on an `any` value                   @typescript-eslint/no-unsafe-member-access
+   90:22  error  Unsafe member access .favorites on an `any` value                   @typescript-eslint/no-unsafe-member-access
+   97:25  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  100:22  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  112:22  error  Unsafe member access .favorites on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  135:24  error  Unsafe argument of type `any` assigned to a parameter of type `{}`  @typescript-eslint/no-unsafe-argument
+  142:25  error  Unsafe member access .updatedAt on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  145:22  error  Unsafe member access .notes on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  151:12  error  Unsafe call of an `any` typed value                                 @typescript-eslint/no-unsafe-call
+  151:22  error  Unsafe member access .notes on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  160:21  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  162:17  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  168:23  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  173:19  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  189:25  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  194:21  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  199:17  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  204:21  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  206:17  error  Unsafe member access .people on an `any` value                      @typescript-eslint/no-unsafe-member-access
+  207:17  error  Unsafe member access .people on an `any` value                      @typescript-eslint/no-unsafe-member-access
+  218:21  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  225:17  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  234:25  error  Unsafe member access .aboutUserId on an `any` value                 @typescript-eslint/no-unsafe-member-access
+  236:22  error  Unsafe member access .notes on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  273:21  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  283:24  error  Unsafe member access .updatedAt on an `any` value                   @typescript-eslint/no-unsafe-member-access
+  285:22  error  Unsafe member access .notes on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  292:23  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  296:19  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  312:23  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  319:19  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  322:22  error  Unsafe member access .notes on an `any` value                       @typescript-eslint/no-unsafe-member-access
+
+test\favoritesNotes\favoritesNotesService.test.ts
+  126:51  error  Unexpected empty async arrow function  @typescript-eslint/no-empty-function
+
+test\integration\matchProfileReader.test.ts
+   67:44  error  Use a ! assertion to more succinctly remove null and undefined from the type  @typescript-eslint/non-nullable-type-assertion-style
+   69:15  error  Use a ! assertion to more succinctly remove null and undefined from the type  @typescript-eslint/non-nullable-type-assertion-style
+   88:21  error  Use a ! assertion to more succinctly remove null and undefined from the type  @typescript-eslint/non-nullable-type-assertion-style
+   96:19  error  Use a ! assertion to more succinctly remove null and undefined from the type  @typescript-eslint/non-nullable-type-assertion-style
+  115:7   error  Use a ! assertion to more succinctly remove null and undefined from the type  @typescript-eslint/non-nullable-type-assertion-style
+  120:7   error  Use a ! assertion to more succinctly remove null and undefined from the type  @typescript-eslint/non-nullable-type-assertion-style
+  121:7   error  Use a ! assertion to more succinctly remove null and undefined from the type  @typescript-eslint/non-nullable-type-assertion-style
+
+test\integration\profileSignUp.test.ts
+  53:17  error  Async method 'findPlaceName' has no 'await' expression   @typescript-eslint/require-await
+  56:17  error  Async method 'scoreCandidate' has no 'await' expression  @typescript-eslint/require-await
+
+test\location\locationService.test.ts
+   40:12  error  Forbidden non-null assertion                                                                            @typescript-eslint/no-non-null-assertion
+   41:12  error  Forbidden non-null assertion                                                                            @typescript-eslint/no-non-null-assertion
+   81:5   error  Unexpected `await` of a non-Promise (non-"Thenable") value                                              @typescript-eslint/await-thenable
+   81:11  error  Placing a void expression inside another expression is forbidden. Move it to its own statement instead  @typescript-eslint/no-confusing-void-expression
+   96:7   error  Async method 'sleep' has no 'await' expression                                                          @typescript-eslint/require-await
+  118:7   error  Async method 'sleep' has no 'await' expression                                                          @typescript-eslint/require-await
+
+test\location\mockFetch.ts
+  26:27  error  'input' may use Object's default stringification format ('[object Object]') when stringified                        @typescript-eslint/no-base-to-string
+  41:48  error  Expected the Promise rejection reason to be an Error                                                                @typescript-eslint/prefer-promise-reject-errors
+  41:48  error  Returning a void expression from an arrow function shorthand is forbidden. Please add braces to the arrow function  @typescript-eslint/no-confusing-void-expression
+
+test\location\nominatimClient.test.ts
+  40:17  error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  61:12  error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  70:23  error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  81:12  error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+  82:12  error  Forbidden non-null assertion  @typescript-eslint/no-non-null-assertion
+
+test\location\places.test.ts
+   38:37  error  Unsafe assignment of an `any` value                            @typescript-eslint/no-unsafe-assignment
+   47:21  error  Unsafe object destructuring of a property with an `any` value  @typescript-eslint/no-unsafe-assignment
+   69:23  error  Unsafe object destructuring of a property with an `any` value  @typescript-eslint/no-unsafe-assignment
+   89:21  error  Unsafe object destructuring of a property with an `any` value  @typescript-eslint/no-unsafe-assignment
+   99:21  error  Unsafe object destructuring of a property with an `any` value  @typescript-eslint/no-unsafe-assignment
+  108:21  error  Unsafe object destructuring of a property with an `any` value  @typescript-eslint/no-unsafe-assignment
+
+test\location\rateLimiter.test.ts
+  12:5   error  Async method 'sleep' has no 'await' expression                                                          @typescript-eslint/require-await
+  28:39  error  Async arrow function has no 'await' expression                                                          @typescript-eslint/require-await
+  33:12  error  Forbidden non-null assertion                                                                            @typescript-eslint/no-non-null-assertion
+  33:29  error  Forbidden non-null assertion                                                                            @typescript-eslint/no-non-null-assertion
+  34:12  error  Forbidden non-null assertion                                                                            @typescript-eslint/no-non-null-assertion
+  34:29  error  Forbidden non-null assertion                                                                            @typescript-eslint/no-non-null-assertion
+  41:37  error  Async arrow function has no 'await' expression                                                          @typescript-eslint/require-await
+  44:37  error  Async arrow function has no 'await' expression                                                          @typescript-eslint/require-await
+  56:35  error  Async arrow function has no 'await' expression                                                          @typescript-eslint/require-await
+  72:7   error  Async method 'sleep' has no 'await' expression                                                          @typescript-eslint/require-await
+  74:27  error  Async arrow function 'task' has no 'await' expression                                                   @typescript-eslint/require-await
+  80:5   error  Unexpected `await` of a non-Promise (non-"Thenable") value                                              @typescript-eslint/await-thenable
+  80:11  error  Placing a void expression inside another expression is forbidden. Move it to its own statement instead  @typescript-eslint/no-confusing-void-expression
+  85:5   error  Unexpected `await` of a non-Promise (non-"Thenable") value                                              @typescript-eslint/await-thenable
+  85:11  error  Placing a void expression inside another expression is forbidden. Move it to its own statement instead  @typescript-eslint/no-confusing-void-expression
+  92:44  error  Async arrow function has no 'await' expression                                                          @typescript-eslint/require-await
+  93:5   error  Unexpected `await` of a non-Promise (non-"Thenable") value                                              @typescript-eslint/await-thenable
+  93:11  error  Placing a void expression inside another expression is forbidden. Move it to its own statement instead  @typescript-eslint/no-confusing-void-expression
+  94:33  error  Async arrow function has no 'await' expression                                                          @typescript-eslint/require-await
+
+test\match\engineClient.test.ts
+   77:18  error  Forbidden non-null assertion     @typescript-eslint/no-non-null-assertion
+  148:18  error  Forbidden non-null assertion     @typescript-eslint/no-non-null-assertion
+  191:68  error  Unexpected empty arrow function  @typescript-eslint/no-empty-function
+
+test\match\fixtures.ts
+  304:19  error  Unnecessary conditional, the types have no overlap                                                         @typescript-eslint/no-unnecessary-condition
+  316:14  error  Use a ! assertion to more succinctly remove null and undefined from the type                               @typescript-eslint/non-nullable-type-assertion-style
+  316:43  error  Use a ! assertion to more succinctly remove null and undefined from the type                               @typescript-eslint/non-nullable-type-assertion-style
+  347:80  error  Async arrow function has no 'await' expression                                                             @typescript-eslint/require-await
+  349:36  error  'init?.body ?? "{}"' may use Object's default stringification format ('[object Object]') when stringified  @typescript-eslint/no-base-to-string
+
+test\match\matchRoutes.test.ts
+   19:55  error  Async arrow function 'fakeValidator' has no 'await' expression      @typescript-eslint/require-await
+   34:39  error  Unsafe assignment of an `any` value                                 @typescript-eslint/no-unsafe-assignment
+   47:21  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+   49:17  error  Unsafe member access .hasMore on an `any` value                     @typescript-eslint/no-unsafe-member-access
+   50:12  error  Unsafe call of an `any` typed value                                 @typescript-eslint/no-unsafe-call
+   50:17  error  Unsafe member access .recommendations on an `any` value             @typescript-eslint/no-unsafe-member-access
+   54:24  error  Unsafe argument of type `any` assigned to a parameter of type `{}`  @typescript-eslint/no-unsafe-argument
+   54:29  error  Unsafe member access .recommendations on an `any` value             @typescript-eslint/no-unsafe-member-access
+   69:13  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+   80:21  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+   90:12  error  Forbidden non-null assertion                                        @typescript-eslint/no-non-null-assertion
+   94:24  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+   98:22  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  104:21  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  123:21  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  125:12  error  Unsafe call of an `any` typed value                                 @typescript-eslint/no-unsafe-call
+  125:17  error  Unsafe member access .candidates on an `any` value                  @typescript-eslint/no-unsafe-member-access
+  129:17  error  Unsafe member access .candidates on an `any` value                  @typescript-eslint/no-unsafe-member-access
+  134:13  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  138:12  error  Unsafe call of an `any` typed value                                 @typescript-eslint/no-unsafe-call
+  138:17  error  Unsafe member access .candidates on an `any` value                  @typescript-eslint/no-unsafe-member-access
+  148:12  error  Forbidden non-null assertion                                        @typescript-eslint/no-non-null-assertion
+  153:21  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  155:17  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  156:17  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  157:17  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  162:21  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  164:17  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  169:21  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  171:17  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  180:21  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  182:17  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  188:21  error  Unsafe object destructuring of a property with an `any` value       @typescript-eslint/no-unsafe-assignment
+  190:17  error  Unsafe member access .error on an `any` value                       @typescript-eslint/no-unsafe-member-access
+
+test\match\matchService.test.ts
+  120:18  error  Forbidden non-null assertion                                   @typescript-eslint/no-non-null-assertion
+  142:24  error  Forbidden non-null assertion                                   @typescript-eslint/no-non-null-assertion
+  149:3   error  Async function 'serviceWithManyMen' has no 'await' expression  @typescript-eslint/require-await
+  152:25  error  Invalid type "number" of template literal expression           @typescript-eslint/restrict-template-expressions
+  153:24  error  Invalid type "number" of template literal expression           @typescript-eslint/restrict-template-expressions
+  154:27  error  Invalid type "number" of template literal expression           @typescript-eslint/restrict-template-expressions
+  155:26  error  Invalid type "number" of template literal expression           @typescript-eslint/restrict-template-expressions
+  167:12  error  Forbidden non-null assertion                                   @typescript-eslint/no-non-null-assertion
+  215:26  error  Async arrow function has no 'await' expression                 @typescript-eslint/require-await
+  273:18  error  Forbidden non-null assertion                                   @typescript-eslint/no-non-null-assertion
+  274:12  error  Forbidden non-null assertion                                   @typescript-eslint/no-non-null-assertion
+
+test\messaging\fixtures.ts
+  125:7   error  Async method 'messageSent' has no 'await' expression  @typescript-eslint/require-await
+  192:24  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+
+test\messaging\messagingRoutes.test.ts
+  48:55  error  Async arrow function 'fakeValidator' has no 'await' expression  @typescript-eslint/require-await
+
+test\messaging\messagingService.test.ts
+  154:13  error  Using the spread operator on a string can mishandle special characters, as can `.split("")`.
+- `...` produces Unicode code points, which will decompose complex emojis into individual emojis
+- .split("") produces UTF-16 code units, which breaks rich characters in many languages
+Consider using `Intl.Segmenter` for locale-aware string decomposition.
+Otherwise, if you don't need to preserve emojis or other non-Ascii characters, disable this lint rule on this line or configure the 'allow' rule option  @typescript-eslint/no-misused-spread
+  165:29  error  Using the spread operator on a string can mishandle special characters, as can `.split("")`.
+- `...` produces Unicode code points, which will decompose complex emojis into individual emojis
+- .split("") produces UTF-16 code units, which breaks rich characters in many languages
+Consider using `Intl.Segmenter` for locale-aware string decomposition.
+Otherwise, if you don't need to preserve emojis or other non-Ascii characters, disable this lint rule on this line or configure the 'allow' rule option  @typescript-eslint/no-misused-spread
+  175:13  error  Using the spread operator on a string can mishandle special characters, as can `.split("")`.
+- `...` produces Unicode code points, which will decompose complex emojis into individual emojis
+- .split("") produces UTF-16 code units, which breaks rich characters in many languages
+Consider using `Intl.Segmenter` for locale-aware string decomposition.
+Otherwise, if you don't need to preserve emojis or other non-Ascii characters, disable this lint rule on this line or configure the 'allow' rule option  @typescript-eslint/no-misused-spread
+  701:49  error  Invalid type "number" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/restrict-template-expressions
+  745:52  error  Invalid type "number" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/restrict-template-expressions
+  768:59  error  Invalid type "number" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/restrict-template-expressions
+  910:84  error  Invalid type "number" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/restrict-template-expressions
+  957:49  error  Invalid type "number" of template literal expression                                                                                                                                                                                                                                                                                                                                                                                                                                                                  @typescript-eslint/restrict-template-expressions
+
+test\photo\photoProcessor.test.ts
+  44:57  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+  44:80  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+  45:25  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+  45:48  error  Invalid type "number" of template literal expression  @typescript-eslint/restrict-template-expressions
+
+test\photo\photoRoutes.test.ts
+   83:5   error  Async method 'findPlaceName' has no 'await' expression                  @typescript-eslint/require-await
+  133:39  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  154:39  error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  171:36  error  Unsafe member access .uploadId on an `any` value                        @typescript-eslint/no-unsafe-member-access
+  174:26  error  Unsafe member access .expiresAt on an `any` value                       @typescript-eslint/no-unsafe-member-access
+  175:26  error  Unsafe member access .deleteToken on an `any` value                     @typescript-eslint/no-unsafe-member-access
+  181:30  error  Forbidden non-null assertion                                            @typescript-eslint/no-non-null-assertion
+  191:26  error  Unsafe member access .error on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  198:26  error  Unsafe member access .error on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  206:26  error  Unsafe member access .error on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  228:25  error  Unsafe member access .error on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  234:23  error  Unsafe member access .error on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  252:36  error  Unsafe member access .photoUrl on an `any` value                        @typescript-eslint/no-unsafe-member-access
+  254:38  error  Invalid type "string | undefined" of template literal expression        @typescript-eslint/restrict-template-expressions
+  257:51  error  Forbidden non-null assertion                                            @typescript-eslint/no-non-null-assertion
+  259:30  error  Forbidden non-null assertion                                            @typescript-eslint/no-non-null-assertion
+  290:26  error  Unsafe member access .error on an `any` value                           @typescript-eslint/no-unsafe-member-access
+  304:7   error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  304:36  error  Unsafe member access .uploadId on an `any` value                        @typescript-eslint/no-unsafe-member-access
+  307:25  error  Unsafe member access .profile on an `any` value                         @typescript-eslint/no-unsafe-member-access
+  308:25  error  Unsafe member access .profile on an `any` value                         @typescript-eslint/no-unsafe-member-access
+  315:25  error  Invalid type "any" of template literal expression                       @typescript-eslint/restrict-template-expressions
+  315:25  error  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+  315:25  error  Unsafe call of an `any` typed value                                     @typescript-eslint/no-unsafe-call
+  315:38  error  Unsafe member access .profile on an `any` value                         @typescript-eslint/no-unsafe-member-access
+  315:66  error  Unsafe member access .pop on an `any` value                             @typescript-eslint/no-unsafe-member-access
+  317:59  error  Invalid type "any" of template literal expression                       @typescript-eslint/restrict-template-expressions
+  317:73  error  Unsafe member access .uploadId on an `any` value                        @typescript-eslint/no-unsafe-member-access
+  318:60  error  Unsafe argument of type `any` assigned to a parameter of type `string`  @typescript-eslint/no-unsafe-argument
+  318:73  error  Unsafe member access .accessToken on an `any` value                     @typescript-eslint/no-unsafe-member-access
+  320:20  error  Unsafe member access .photoUrl on an `any` value                        @typescript-eslint/no-unsafe-member-access
+  320:48  error  Unsafe member access .profile on an `any` value                         @typescript-eslint/no-unsafe-member-access
+  333:7   error  Unsafe assignment of an `any` value                                     @typescript-eslint/no-unsafe-assignment
+  333:36  error  Unsafe member access .uploadId on an `any` value                        @typescript-eslint/no-unsafe-member-access
+  336:25  error  Unsafe member access .error on an `any` value                           @typescript-eslint/no-unsafe-member-access
+
+test\photo\photoStore.test.ts
+   50:5   error  Unexpected `await` of a non-Promise (non-"Thenable") value                                              @typescript-eslint/await-thenable
+   50:11  error  Placing a void expression inside another expression is forbidden. Move it to its own statement instead  @typescript-eslint/no-confusing-void-expression
+   70:5   error  Unexpected `await` of a non-Promise (non-"Thenable") value                                              @typescript-eslint/await-thenable
+   70:11  error  Placing a void expression inside another expression is forbidden. Move it to its own statement instead  @typescript-eslint/no-confusing-void-expression
+   80:31  error  Unsafe assignment of an `any` value                                                                     @typescript-eslint/no-unsafe-assignment
+   81:31  error  Unsafe assignment of an `any` value                                                                     @typescript-eslint/no-unsafe-assignment
+   96:5   error  Async method 'send' has no 'await' expression                                                           @typescript-eslint/require-await
+  108:35  error  Invalid type "number" of template literal expression                                                    @typescript-eslint/restrict-template-expressions
+  143:5   error  Unexpected `await` of a non-Promise (non-"Thenable") value                                              @typescript-eslint/await-thenable
+  143:11  error  Placing a void expression inside another expression is forbidden. Move it to its own statement instead  @typescript-eslint/no-confusing-void-expression
+  149:5   error  Unexpected `await` of a non-Promise (non-"Thenable") value                                              @typescript-eslint/await-thenable
+  149:11  error  Placing a void expression inside another expression is forbidden. Move it to its own statement instead  @typescript-eslint/no-confusing-void-expression
+  157:5   error  Unexpected `await` of a non-Promise (non-"Thenable") value                                              @typescript-eslint/await-thenable
+  157:11  error  Placing a void expression inside another expression is forbidden. Move it to its own statement instead  @typescript-eslint/no-confusing-void-expression
+  162:5   error  Unexpected `await` of a non-Promise (non-"Thenable") value                                              @typescript-eslint/await-thenable
+  162:11  error  Placing a void expression inside another expression is forbidden. Move it to its own statement instead  @typescript-eslint/no-confusing-void-expression
+
+test\photo\photoUploads.test.ts
+   67:5   error  Unexpected `await` of a non-Promise (non-"Thenable") value                                              @typescript-eslint/await-thenable
+   67:11  error  Placing a void expression inside another expression is forbidden. Move it to its own statement instead  @typescript-eslint/no-confusing-void-expression
+   91:5   error  Unexpected `await` of a non-Promise (non-"Thenable") value                                              @typescript-eslint/await-thenable
+   91:11  error  Placing a void expression inside another expression is forbidden. Move it to its own statement instead  @typescript-eslint/no-confusing-void-expression
+  100:5   error  Unexpected `await` of a non-Promise (non-"Thenable") value                                              @typescript-eslint/await-thenable
+  100:11  error  Placing a void expression inside another expression is forbidden. Move it to its own statement instead  @typescript-eslint/no-confusing-void-expression
+  112:5   error  Unexpected `await` of a non-Promise (non-"Thenable") value                                              @typescript-eslint/await-thenable
+  112:11  error  Placing a void expression inside another expression is forbidden. Move it to its own statement instead  @typescript-eslint/no-confusing-void-expression
+  163:39  error  Forbidden non-null assertion                                                                            @typescript-eslint/no-non-null-assertion
+
+test\profile\fixtures.ts
+   89:5  error  Async method 'findPlaceName' has no 'await' expression                                                              @typescript-eslint/require-await
+  129:5  error  Returning a void expression from an arrow function shorthand is forbidden. Please add braces to the arrow function  @typescript-eslint/no-confusing-void-expression
+
+test\profile\profileRoutes.test.ts
+   47:39  error  Unsafe assignment of an `any` value                                                 @typescript-eslint/no-unsafe-assignment
+   66:26  error  Unsafe member access .error on an `any` value                                       @typescript-eslint/no-unsafe-member-access
+   75:32  error  Unsafe member access .accessToken on an `any` value                                 @typescript-eslint/no-unsafe-member-access
+   76:32  error  Unsafe member access .refreshToken on an `any` value                                @typescript-eslint/no-unsafe-member-access
+   77:25  error  Unsafe member access .profile on an `any` value                                     @typescript-eslint/no-unsafe-member-access
+   79:54  error  Unsafe argument of type `any` assigned to a parameter of type `string | undefined`  @typescript-eslint/no-unsafe-argument
+   79:67  error  Unsafe member access .accessToken on an `any` value                                 @typescript-eslint/no-unsafe-member-access
+   80:43  error  Unsafe assignment of an `any` value                                                 @typescript-eslint/no-unsafe-assignment
+   80:62  error  Unsafe member access .profile on an `any` value                                     @typescript-eslint/no-unsafe-member-access
+   92:26  error  Unsafe member access .error on an `any` value                                       @typescript-eslint/no-unsafe-member-access
+  100:26  error  Unsafe member access .error on an `any` value                                       @typescript-eslint/no-unsafe-member-access
+  112:26  error  Unsafe member access .error on an `any` value                                       @typescript-eslint/no-unsafe-member-access
+  136:26  error  Unsafe member access .displayName on an `any` value                                 @typescript-eslint/no-unsafe-member-access
+  145:26  error  Unsafe member access .error on an `any` value                                       @typescript-eslint/no-unsafe-member-access
+  160:33  error  Unsafe member access .matchScore on an `any` value                                  @typescript-eslint/no-unsafe-member-access
+  161:26  error  Unsafe member access .dateOfBirth on an `any` value                                 @typescript-eslint/no-unsafe-member-access
+  162:26  error  Unsafe member access .location on an `any` value                                    @typescript-eslint/no-unsafe-member-access
+  169:26  error  Unsafe member access .error on an `any` value                                       @typescript-eslint/no-unsafe-member-access
+
+test\profile\profileService.test.ts
+   83:25  error  Invalid type "string | undefined" of template literal expression                                        @typescript-eslint/restrict-template-expressions
+  174:7   error  Use a ! assertion to more succinctly remove null and undefined from the type                            @typescript-eslint/non-nullable-type-assertion-style
+  377:39  error  Async arrow function has no 'await' expression                                                          @typescript-eslint/require-await
+  380:5   error  Unexpected `await` of a non-Promise (non-"Thenable") value                                              @typescript-eslint/await-thenable
+  380:11  error  Placing a void expression inside another expression is forbidden. Move it to its own statement instead  @typescript-eslint/no-confusing-void-expression
+
+test\repositories\contracts.ts
+  134:67  error  Invalid type "number" of template literal expression                          @typescript-eslint/restrict-template-expressions
+  138:20  error  Forbidden non-null assertion                                                  @typescript-eslint/no-non-null-assertion
+  150:79  error  Invalid type "number" of template literal expression                          @typescript-eslint/restrict-template-expressions
+  152:24  error  Forbidden non-null assertion                                                  @typescript-eslint/no-non-null-assertion
+  202:22  error  Forbidden non-null assertion                                                  @typescript-eslint/no-non-null-assertion
+  470:42  error  Use a ! assertion to more succinctly remove null and undefined from the type  @typescript-eslint/non-nullable-type-assertion-style
+  471:39  error  Use a ! assertion to more succinctly remove null and undefined from the type  @typescript-eslint/non-nullable-type-assertion-style
+
+test\repositories\inMemory.test.ts
+  27:36  error  Async arrow function has no 'await' expression     @typescript-eslint/require-await
+  32:38  error  Async arrow function has no 'await' expression     @typescript-eslint/require-await
+  37:34  error  Async arrow function has no 'await' expression     @typescript-eslint/require-await
+  39:29  error  Async arrow function has no 'await' expression     @typescript-eslint/require-await
+  40:9   error  Unsafe assignment of an `any` value                @typescript-eslint/no-unsafe-assignment
+  42:13  error  Unsafe assignment of an `any` value                @typescript-eslint/no-unsafe-assignment
+  42:20  error  Unsafe call of an `any` typed value                @typescript-eslint/no-unsafe-call
+  42:27  error  Unsafe member access .replace on an `any` value    @typescript-eslint/no-unsafe-member-access
+  43:25  error  Unsafe assignment of an `any` value                @typescript-eslint/no-unsafe-assignment
+  43:76  error  Invalid type "any" of template literal expression  @typescript-eslint/restrict-template-expressions
+  52:36  error  Async arrow function has no 'await' expression     @typescript-eslint/require-await
+  54:41  error  Async arrow function has no 'await' expression     @typescript-eslint/require-await
+
+test\server.test.ts
+  34:35  error  Invalid type "number | undefined" of template literal expression  @typescript-eslint/restrict-template-expressions
+
+test\shutdown.test.ts
+  13:5   error  Async method 'stopServer' has no 'await' expression     @typescript-eslint/require-await
+  19:5   error  Async method 'closeDatabase' has no 'await' expression  @typescript-eslint/require-await
+  25:41  error  Invalid type "number" of template literal expression    @typescript-eslint/restrict-template-expressions
+  46:27  error  Unexpected empty arrow function                         @typescript-eslint/no-empty-function
+  59:27  error  Unexpected empty arrow function                         @typescript-eslint/no-empty-function
+
+✖ 364 problems (364 errors, 0 warnings)
+  18 errors and 0 warnings potentially fixable with the `--fix` option.
+
+error: script "lint:quality" exited with code 1

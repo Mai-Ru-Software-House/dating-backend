@@ -9,6 +9,7 @@
     "test": "bun test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
+    "lint:quality": "eslint -c eslint.quality.config.js .",
     "format": "prettier --write .",
     "db:generate": "bunx --bun --no-install prisma generate",
     "db:status": "bunx --bun --no-install prisma migrate status",
