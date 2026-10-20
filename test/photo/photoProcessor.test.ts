@@ -41,8 +41,8 @@ async function createImage(
 ): Promise<Buffer> {
   const overlays = marks.map((mark) => ({
     input: Buffer.from(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${mark.width}" height="${mark.height}">` +
-        `<rect width="${mark.width}" height="${mark.height}" fill="${mark.color}"/></svg>`,
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${String(mark.width)}" height="${String(mark.height)}">` +
+        `<rect width="${String(mark.width)}" height="${String(mark.height)}" fill="${mark.color}"/></svg>`,
     ),
     left: mark.left,
     top: mark.top,

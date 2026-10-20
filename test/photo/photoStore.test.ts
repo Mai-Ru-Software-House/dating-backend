@@ -8,6 +8,7 @@ import { describe, expect, it } from "bun:test";
 
 import { createInMemoryPhotoStore } from "../../src/services/photo/inMemoryPhotoStore";
 import { ensureRustFSBucket, type BucketClient } from "../../src/services/photo/photoStore";
+import { rejectionOf } from "../rejection";
 
 const NOW = new Date("2026-10-10T10:00:00Z");
 const LATER = new Date("2026-10-10T10:01:00Z");
@@ -47,7 +48,7 @@ describe("createInMemoryPhotoStore", () => {
     await store.putPhoto("uploads/a.jpg", new Uint8Array([1]), "image/jpeg");
     await store.deletePhoto("uploads/a.jpg");
     expect(await store.getPhoto("uploads/a.jpg")).toBeNull();
-    await expect(store.deletePhoto("uploads/a.jpg")).resolves.toBeUndefined();
+    await store.deletePhoto("uploads/a.jpg");
   });
 
   it("copies an object under a new key, stamped with the clock", async () => {
@@ -67,7 +68,9 @@ describe("createInMemoryPhotoStore", () => {
 
   it("refuses to copy an object that is not there", async () => {
     const store = createInMemoryPhotoStore();
-    await expect(store.copyPhoto("uploads/none.jpg", "profile-photos/b.jpg")).rejects.toThrow();
+    expect(
+      await rejectionOf(store.copyPhoto("uploads/none.jpg", "profile-photos/b.jpg")),
+    ).toBeInstanceOf(Error);
   });
 
   it("lists only the objects under the prefix, sorted by key", async () => {
@@ -77,8 +80,8 @@ describe("createInMemoryPhotoStore", () => {
     await store.putPhoto("profile-photos/c.jpg", new Uint8Array([3]), "image/jpeg");
 
     expect(await store.listPhotos("uploads/")).toEqual([
-      { key: "uploads/a.jpg", lastModified: expect.any(Date) },
-      { key: "uploads/b.jpg", lastModified: expect.any(Date) },
+      { key: "uploads/a.jpg", lastModified: expect.any(Date) as Date },
+      { key: "uploads/b.jpg", lastModified: expect.any(Date) as Date },
     ]);
   });
 });
@@ -93,19 +96,19 @@ function fakeBucketClient(steps: FakeClientStep[]): BucketClient & { sent: unkno
   const sent: unknown[] = [];
   return {
     sent,
-    async send(command: HeadBucketCommand | CreateBucketCommand) {
+    send(command: HeadBucketCommand | CreateBucketCommand) {
       sent.push(command);
       const step = steps[sent.length - 1];
       if (step?.failWith !== undefined) {
-        throw step.failWith;
+        return Promise.reject(step.failWith);
       }
-      return step?.answer;
+      return Promise.resolve(step?.answer);
     },
   };
 }
 
 function headNotFoundError(statusCode: number): Error {
-  const error = new Error(`HTTP ${statusCode}`) as Error & {
+  const error = new Error(`HTTP ${String(statusCode)}`) as Error & {
     $metadata?: { httpStatusCode?: number };
   };
   error.$metadata = { httpStatusCode: statusCode };
@@ -140,13 +143,13 @@ describe("ensureRustFSBucket", () => {
       { failWith: headNotFoundError(404) },
       { failWith: namedError("BucketAlreadyOwnedByUs") },
     ]);
-    await expect(ensureRustFSBucket(raced, BUCKET)).resolves.toBeUndefined();
+    await ensureRustFSBucket(raced, BUCKET);
 
     const other = fakeBucketClient([
       { failWith: headNotFoundError(404) },
       { failWith: namedError("AlreadyExists") },
     ]);
-    await expect(ensureRustFSBucket(other, BUCKET)).resolves.toBeUndefined();
+    await ensureRustFSBucket(other, BUCKET);
   });
 
   it("throws when the bucket is missing and the create fails for another reason", async () => {
@@ -154,12 +157,12 @@ describe("ensureRustFSBucket", () => {
       { failWith: headNotFoundError(404) },
       { failWith: namedError("AccessDenied") },
     ]);
-    await expect(ensureRustFSBucket(client, BUCKET)).rejects.toThrow("AccessDenied");
+    expect(String(await rejectionOf(ensureRustFSBucket(client, BUCKET)))).toContain("AccessDenied");
   });
 
   it("throws when the head fails without a 404", async () => {
     const client = fakeBucketClient([{ failWith: headNotFoundError(500) }]);
-    await expect(ensureRustFSBucket(client, BUCKET)).rejects.toThrow("HTTP 500");
+    expect(String(await rejectionOf(ensureRustFSBucket(client, BUCKET)))).toContain("HTTP 500");
     expect(client.sent).toHaveLength(1);
   });
 });

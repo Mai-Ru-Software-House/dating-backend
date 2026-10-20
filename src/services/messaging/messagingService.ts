@@ -104,10 +104,10 @@ export function validateMessageText(text: string): string {
   if (trimmed === "") {
     throw invalidInput("text", "The message text cannot be empty.");
   }
-  if ([...trimmed].length > MAX_MESSAGE_LENGTH) {
+  if (Array.from(trimmed).length > MAX_MESSAGE_LENGTH) {
     throw invalidInput(
       "text",
-      `The message text can have at most ${MAX_MESSAGE_LENGTH} characters.`,
+      `The message text can have at most ${String(MAX_MESSAGE_LENGTH)} characters.`,
     );
   }
   return trimmed;
@@ -125,7 +125,10 @@ export function resolveLimit(limit: number | undefined, defaultLimit: number): n
     return defaultLimit;
   }
   if (!Number.isInteger(limit) || limit < MIN_LIMIT || limit > MAX_LIMIT) {
-    throw invalidInput("limit", `limit must be a whole number from ${MIN_LIMIT} to ${MAX_LIMIT}.`);
+    throw invalidInput(
+      "limit",
+      `limit must be a whole number from ${String(MIN_LIMIT)} to ${String(MAX_LIMIT)}.`,
+    );
   }
   return limit;
 }

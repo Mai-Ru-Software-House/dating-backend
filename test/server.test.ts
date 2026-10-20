@@ -31,7 +31,7 @@ describe("request size limit", () => {
 
   beforeAll(() => {
     app.listen({ port: 0, maxRequestBodySize: MAX_REQUEST_BODY_BYTES });
-    baseUrl = `http://localhost:${app.server?.port}`;
+    baseUrl = `http://localhost:${String(app.server?.port)}`;
   });
 
   afterAll(async () => {

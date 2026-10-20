@@ -99,7 +99,7 @@ export function createNominatimClient(options: NominatimClientOptions): Nominati
           signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
         });
         if (!response.ok) {
-          throw new Error(`Nominatim answered ${response.status}`);
+          throw new Error(`Nominatim answered ${String(response.status)}`);
         }
         return readAddress(await response.json());
       } catch (error) {

@@ -123,7 +123,7 @@ describe("favorites in the chat list", () => {
   }
 
   it("shows chai first before anyone else is added, as the seed data says", async () => {
-    const order = await chatListOrder(async () => {});
+    const order = await chatListOrder(() => Promise.resolve());
     expect(order[0]).toBe(CHAI_ID);
   });
 

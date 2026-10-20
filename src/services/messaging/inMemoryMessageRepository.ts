@@ -74,40 +74,44 @@ export function createInMemoryMessageRepository(): MessageRepository {
   }
 
   return {
-    async insertMessage(message: NewMessage) {
+    insertMessage(message: NewMessage) {
       lastNumber += 1;
       const messageId = `${MESSAGE_ID_PREFIX}${String(lastNumber).padStart(MESSAGE_ID_DIGITS, "0")}`;
       const stored: StoredMessage = { ...message, messageId, readAt: null };
       messages.push(stored);
-      return copyMessage(stored);
+      return Promise.resolve(copyMessage(stored));
     },
 
-    async findMessageById(messageId) {
+    findMessageById(messageId) {
       const found = messages.find((message) => message.messageId === messageId);
-      return found === undefined ? null : copyMessage(found);
+      return Promise.resolve(found === undefined ? null : copyMessage(found));
     },
 
-    async findMessagesByIds(messageIds) {
+    findMessagesByIds(messageIds) {
       const wanted = new Set(messageIds);
-      return messages.filter((message) => wanted.has(message.messageId)).map(copyMessage);
+      return Promise.resolve(
+        messages.filter((message) => wanted.has(message.messageId)).map(copyMessage),
+      );
     },
 
-    async listConversationMessages(userA, userB, page) {
+    listConversationMessages(userA, userB, page) {
       const conversation = messages.filter((message) => isBetween(message, userA, userB));
-      return selectConversationPage(conversation, page).map(copyMessage);
+      return Promise.resolve(selectConversationPage(conversation, page).map(copyMessage));
     },
 
-    async listUnreadForReceiver(receiverId, page: UnreadPage) {
+    listUnreadForReceiver(receiverId, page: UnreadPage) {
       const { before, limit } = page;
-      return messages
-        .filter((message) => isUnreadFor(message, receiverId))
-        .filter((message) => before === undefined || compareMessageKeys(message, before) < 0)
-        .sort(newestFirst)
-        .slice(0, limit)
-        .map(copyMessage);
+      return Promise.resolve(
+        messages
+          .filter((message) => isUnreadFor(message, receiverId))
+          .filter((message) => before === undefined || compareMessageKeys(message, before) < 0)
+          .sort(newestFirst)
+          .slice(0, limit)
+          .map(copyMessage),
+      );
     },
 
-    async listConversationSummaries(userId) {
+    listConversationSummaries(userId) {
       const lastByPartner = new Map<string, StoredMessage>();
       for (const message of messages) {
         const isMine = message.senderId === userId || message.receiverId === userId;
@@ -128,17 +132,17 @@ export function createInMemoryMessageRepository(): MessageRepository {
           unreadCount: countUnreadFrom(otherUserId, userId),
         });
       }
-      return summaries;
+      return Promise.resolve(summaries);
     },
 
-    async markConversationRead(readerId, otherUserId, readAt) {
+    markConversationRead(readerId, otherUserId, readAt) {
       for (const message of messages) {
         const isFromOther = message.senderId === otherUserId && message.receiverId === readerId;
         if (isFromOther && message.readAt === null) {
           message.readAt = readAt;
         }
       }
-      return countUnreadFrom(otherUserId, readerId);
+      return Promise.resolve(countUnreadFrom(otherUserId, readerId));
     },
   };
 }
@@ -152,8 +156,8 @@ export function createInMemoryFavoritesReader(
   favoritesByUser: Record<string, string[]> = {},
 ): FavoritesReader {
   return {
-    async listFavoriteUserIds(userId) {
-      return [...(favoritesByUser[userId] ?? [])];
+    listFavoriteUserIds(userId) {
+      return Promise.resolve([...(favoritesByUser[userId] ?? [])]);
     },
   };
 }
@@ -166,16 +170,20 @@ export function createInMemoryFavoritesReader(
 export function createInMemoryUserReader(users: UserSummary[] = []): UserReader {
   const byId = new Map(users.map((user) => [user.userId, user]));
   return {
-    async findUserSummaries(userIds) {
-      return userIds.flatMap((userId) => {
-        const user = byId.get(userId);
-        return user === undefined ? [] : [{ ...user }];
-      });
+    findUserSummaries(userIds) {
+      return Promise.resolve(
+        userIds.flatMap((userId) => {
+          const user = byId.get(userId);
+          return user === undefined ? [] : [{ ...user }];
+        }),
+      );
     },
   };
 }
 
 /** A notifier that does nothing, used until real time messages exist. */
 export const noopMessageNotifier: MessageNotifier = {
-  async messageSent() {},
+  messageSent() {
+    return Promise.resolve();
+  },
 };

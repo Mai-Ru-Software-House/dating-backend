@@ -23,7 +23,7 @@ export function createMockFetch(handler: Handler) {
   const calls: RecordedCall[] = [];
   const mockFetch = async (input: string | URL | Request, init?: RequestInit) => {
     const call = {
-      url: new URL(String(input)),
+      url: new URL(typeof input === "string" || input instanceof URL ? input : input.url),
       headers: new Headers(init?.headers),
       method: init?.method ?? "GET",
       body: typeof init?.body === "string" ? (JSON.parse(init.body) as unknown) : undefined,
@@ -38,7 +38,17 @@ export function createMockFetch(handler: Handler) {
     return Promise.race([
       answer,
       new Promise<never>((_resolve, reject) => {
-        signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+        signal.addEventListener(
+          "abort",
+          () => {
+            reject(
+              signal.reason instanceof Error
+                ? signal.reason
+                : new Error("The request was aborted."),
+            );
+          },
+          { once: true },
+        );
       }),
     ]);
   };

@@ -1,0 +1,7 @@
+Tool: ESLint v10.12.0 with typescript-eslint strictTypeChecked + stylisticTypeChecked
+Config: eslint.quality.config.js
+Command: bun run lint:quality
+Base commit: 50e2e7e (refactor: fix strict ESLint findings in Auth, Profile, Photo, repository code and tests)
+Run: 2 (after the fixes)
+------------------------------------------------------------
+$ eslint -c eslint.quality.config.js .

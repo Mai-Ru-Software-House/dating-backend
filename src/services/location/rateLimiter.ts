@@ -7,7 +7,7 @@
 /** Thrown when a call would have to wait longer than the allowed maximum. */
 export class RateLimitExceededError extends Error {
   constructor(waitMs: number) {
-    super(`The wait of ${waitMs} ms is longer than the allowed maximum.`);
+    super(`The wait of ${String(waitMs)} ms is longer than the allowed maximum.`);
     this.name = "RateLimitExceededError";
   }
 }

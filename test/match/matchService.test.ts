@@ -117,7 +117,10 @@ describe("what the engine receives", () => {
     await service.getRecommendations(ALICE.userId, { limit: 5 });
 
     expect(engine.calls).toHaveLength(1);
-    const call = engine.calls[0]!;
+    const call = engine.calls[0];
+    if (call === undefined) {
+      throw new Error("The engine was not called.");
+    }
     expect(call.path).toBe("/internal/v1/recommendations");
     expect(call.body.userId).toBe(ALICE.userId);
     expect(call.body.limit).toBe(6);
@@ -139,20 +142,20 @@ describe("what the engine receives", () => {
   it("only holds candidates who want alice, so the pool is small", async () => {
     const { service, engine } = createTestMatchService();
     await service.getRecommendations(ALICE.userId, {});
-    const candidates = engine.calls[0]!.body.candidates as { userId: string }[];
+    const candidates = engine.calls[0]?.body.candidates as { userId: string }[];
     const sent = candidates.map((candidate) => candidate.userId).sort();
     expect(sent).toEqual([BOB.userId, CHAI.userId].sort());
   });
 });
 
 describe("paging", () => {
-  async function serviceWithManyMen() {
+  function serviceWithManyMen() {
     const men = Array.from({ length: 7 }, (_, index) => ({
       ...BOB,
-      userId: `usr_man${index}`,
-      username: `man_${index}`,
-      displayName: `Man ${index}`,
-      photoId: `pho_man${index}`,
+      userId: `usr_man${String(index)}`,
+      username: `man_${String(index)}`,
+      displayName: `Man ${String(index)}`,
+      photoId: `pho_man${String(index)}`,
       // Each man is a little farther away, so the order is fixed.
       latitude: BOB.latitude + index * 0.01,
     }));
@@ -160,15 +163,15 @@ describe("paging", () => {
   }
 
   it("returns the first page with hasMore, asking the engine for one extra", async () => {
-    const { service, engine } = await serviceWithManyMen();
+    const { service, engine } = serviceWithManyMen();
     const page = await service.getRecommendations(ALICE.userId, { limit: 3 });
     expect(page.recommendations).toHaveLength(3);
     expect(page.hasMore).toBe(true);
-    expect(engine.calls[0]!.body.limit).toBe(4);
+    expect(engine.calls[0]?.body.limit).toBe(4);
   });
 
   it("returns the next page after the offset, with no repeats", async () => {
-    const { service } = await serviceWithManyMen();
+    const { service } = serviceWithManyMen();
     const first = await service.getRecommendations(ALICE.userId, { limit: 3 });
     const second = await service.getRecommendations(ALICE.userId, { limit: 3, offset: 3 });
     const third = await service.getRecommendations(ALICE.userId, { limit: 3, offset: 6 });
@@ -181,7 +184,7 @@ describe("paging", () => {
   });
 
   it("returns an empty page past the end", async () => {
-    const { service } = await serviceWithManyMen();
+    const { service } = serviceWithManyMen();
     const page = await service.getRecommendations(ALICE.userId, { limit: 3, offset: 30 });
     expect(page).toEqual({ recommendations: [], hasMore: false });
   });
@@ -212,7 +215,7 @@ describe("what the engine sends back", () => {
       engine: createMatchEngineClient({
         baseUrl: "http://match-engine.test:8000",
         timeoutMs: 1000,
-        fetch: (async () => Response.json({ candidates })) as unknown as typeof fetch,
+        fetch: (() => Promise.resolve(Response.json({ candidates }))) as unknown as typeof fetch,
       }),
       now: () => NOW,
     });
@@ -270,8 +273,8 @@ describe("searchCandidates", () => {
   it("sends the engine alice's preferences and location when the search is empty", async () => {
     const { service, engine } = createTestMatchService();
     await service.searchCandidates(ALICE.userId, {});
-    const body = engine.calls[0]!.body;
-    expect(engine.calls[0]!.path).toBe("/internal/v1/candidates/search");
+    const body = engine.calls[0]?.body ?? {};
+    expect(engine.calls[0]?.path).toBe("/internal/v1/candidates/search");
     expect(body).toMatchObject({
       ageMin: 24,
       ageMax: 32,

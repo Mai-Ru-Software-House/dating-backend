@@ -94,12 +94,12 @@ export async function processProfilePhoto(bytes: Uint8Array): Promise<ProcessedP
   } catch {
     throw invalid(READABLE_RULE);
   }
-  const width = meta.width;
-  const height = meta.height;
+  // sharp types these as numbers, but a damaged or unusual file can leave them out.
+  const optionalMeta: Partial<Metadata> = meta;
+  const { width, height, format } = optionalMeta;
   if (width === undefined || height === undefined || width === 0 || height === 0) {
     throw invalid(READABLE_RULE);
   }
-  const format = meta.format;
   if (format === undefined || !ALLOWED_FORMATS.has(format)) {
     throw invalid(FORMAT_RULE);
   }

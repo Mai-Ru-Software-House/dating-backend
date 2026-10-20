@@ -103,7 +103,9 @@ export function startUploadSweep(
       }
     })();
   }, intervalMs);
-  return () => clearInterval(timer);
+  return () => {
+    clearInterval(timer);
+  };
 }
 
 function uploadNotFound(): ApiError {

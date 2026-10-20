@@ -274,10 +274,10 @@ function buildLongThread(): SeedMessage[] {
   return Array.from({ length: LONG_THREAD_LENGTH }, (_, index) => {
     const isFirstSender = index % LONG_THREAD_PARTICIPANTS.length === 0;
     return {
-      name: `T${index + 1}`,
+      name: `T${String(index + 1)}`,
       from: isFirstSender ? first : second,
       to: isFirstSender ? second : first,
-      text: `Message ${index + 1} of ${LONG_THREAD_LENGTH} in the long thread.`,
+      text: `Message ${String(index + 1)} of ${String(LONG_THREAD_LENGTH)} in the long thread.`,
       sentMinutesAgo: LONG_THREAD_START_MINUTES_AGO - index,
       isRead: true,
     };
@@ -401,7 +401,7 @@ async function seed(prisma: PrismaClient, includeLongThread: boolean): Promise<v
   const existingCount = await prisma.user.count({ where: { username: { in: usernames } } });
   if (existingCount > 0) {
     throw new Error(
-      `${existingCount} of the test users already exist. To seed again, drop and recreate ` +
+      `${String(existingCount)} of the test users already exist. To seed again, drop and recreate ` +
         "the database, run `bun run db:deploy`, then `bun run db:seed`.",
     );
   }
@@ -418,8 +418,8 @@ async function seed(prisma: PrismaClient, includeLongThread: boolean): Promise<v
   );
 
   console.log(
-    `Added ${TEST_USERS.length} users, ${messages.length} messages, ` +
-      `${SEED_FAVORITES.length} favorite and ${SEED_NOTES.length} note.`,
+    `Added ${String(TEST_USERS.length)} users, ${String(messages.length)} messages, ` +
+      `${String(SEED_FAVORITES.length)} favorite and ${String(SEED_NOTES.length)} note.`,
   );
   if (!includeLongThread) {
     console.log("The long alice/dan thread was not added (set SEED_LONG_THREAD=true to add it).");

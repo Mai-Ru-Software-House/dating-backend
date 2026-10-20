@@ -37,8 +37,8 @@ describe("createLocationService", () => {
 
     await service.findPlaceName(13.746612345, 100.534698765);
 
-    expect(calls[0]!.url.searchParams.get("lat")).toBe("13.747");
-    expect(calls[0]!.url.searchParams.get("lon")).toBe("100.535");
+    expect(calls[0]?.url.searchParams.get("lat")).toBe("13.747");
+    expect(calls[0]?.url.searchParams.get("lon")).toBe("100.535");
   });
 
   it("makes one request for simultaneous calls for the same area", async () => {
@@ -78,7 +78,8 @@ describe("createLocationService", () => {
     );
     const service = createLocationService({ baseUrl: BASE_URL, fetch });
 
-    await expect(service.findPlaceName(13.7466, 100.5347)).rejects.toBeInstanceOf(ApiError);
+    const failure = await service.findPlaceName(13.7466, 100.5347).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(ApiError);
     shouldFail = false;
 
     expect(await service.findPlaceName(13.7466, 100.5347)).toBe("Bangkok, Pathum Wan");
@@ -93,8 +94,9 @@ describe("createLocationService", () => {
       minIntervalMs: 1000,
       maxWaitMs: 5000,
       now: () => 0,
-      sleep: async (ms) => {
+      sleep: (ms) => {
         requestedWaits.push(ms);
+        return Promise.resolve();
       },
     });
     const service = createLocationService({ baseUrl: BASE_URL, fetch, limiter });
@@ -115,7 +117,7 @@ describe("createLocationService", () => {
       minIntervalMs: 1000,
       maxWaitMs: 1000,
       now: () => 0,
-      sleep: async () => undefined,
+      sleep: () => Promise.resolve(undefined),
     });
     const service = createLocationService({ baseUrl: BASE_URL, fetch, limiter });
 

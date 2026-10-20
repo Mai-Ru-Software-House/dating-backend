@@ -35,54 +35,62 @@ export function createInMemoryPhotoStore(
   const objects = new Map<string, InMemoryObject>();
 
   return {
-    async putPhoto(objectKey, bytes, contentType) {
+    putPhoto(objectKey, bytes, contentType) {
       objects.set(objectKey, {
         bytes: new Uint8Array(bytes),
         contentType,
         lastModified: now(),
       });
+      return Promise.resolve();
     },
 
-    async getPhoto(objectKey): Promise<StoredPhoto | null> {
+    getPhoto(objectKey): Promise<StoredPhoto | null> {
       const object = objects.get(objectKey);
       if (object === undefined) {
-        return null;
+        return Promise.resolve(null);
       }
-      return { bytes: new Uint8Array(object.bytes), contentType: object.contentType };
+      return Promise.resolve({
+        bytes: new Uint8Array(object.bytes),
+        contentType: object.contentType,
+      });
     },
 
-    async headPhoto(objectKey): Promise<PhotoInfo | null> {
+    headPhoto(objectKey): Promise<PhotoInfo | null> {
       const object = objects.get(objectKey);
       if (object === undefined) {
-        return null;
+        return Promise.resolve(null);
       }
-      return { lastModified: new Date(object.lastModified.getTime()) };
+      return Promise.resolve({ lastModified: new Date(object.lastModified.getTime()) });
     },
 
-    async deletePhoto(objectKey) {
+    deletePhoto(objectKey) {
       objects.delete(objectKey);
+      return Promise.resolve();
     },
 
-    async copyPhoto(fromKey, toKey) {
+    copyPhoto(fromKey, toKey) {
       const object = objects.get(fromKey);
       if (object === undefined) {
-        throw new Error(`The photo store has no object ${fromKey} to copy.`);
+        return Promise.reject(new Error(`The photo store has no object ${fromKey} to copy.`));
       }
       objects.set(toKey, {
         bytes: new Uint8Array(object.bytes),
         contentType: object.contentType,
         lastModified: now(),
       });
+      return Promise.resolve();
     },
 
-    async listPhotos(prefix) {
-      return [...objects.entries()]
-        .filter(([key]) => key.startsWith(prefix))
-        .map(([key, object]) => ({
-          key,
-          lastModified: new Date(object.lastModified.getTime()),
-        }))
-        .sort((a, b) => (a.key < b.key ? -1 : 1));
+    listPhotos(prefix) {
+      return Promise.resolve(
+        [...objects.entries()]
+          .filter(([key]) => key.startsWith(prefix))
+          .map(([key, object]) => ({
+            key,
+            lastModified: new Date(object.lastModified.getTime()),
+          }))
+          .sort((a, b) => (a.key < b.key ? -1 : 1)),
+      );
     },
 
     listKeys() {

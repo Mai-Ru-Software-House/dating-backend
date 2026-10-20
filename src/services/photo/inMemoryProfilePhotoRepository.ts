@@ -16,18 +16,18 @@ export function createInMemoryProfilePhotoRepository(
   const photoKeys = new Map(users.map((user) => [user.userId, user.photoKey]));
 
   return {
-    async findPhotoKeyByPhotoId(photoId) {
+    findPhotoKeyByPhotoId(photoId) {
       const wanted = new Set(possibleProfilePhotoKeys(photoId));
-      return [...photoKeys.values()].find((key) => wanted.has(key)) ?? null;
+      return Promise.resolve([...photoKeys.values()].find((key) => wanted.has(key)) ?? null);
     },
 
-    async replacePhotoKey(userId, newPhotoKey) {
+    replacePhotoKey(userId, newPhotoKey) {
       const oldPhotoKey = photoKeys.get(userId);
       if (oldPhotoKey === undefined) {
-        return null;
+        return Promise.resolve(null);
       }
       photoKeys.set(userId, newPhotoKey);
-      return oldPhotoKey;
+      return Promise.resolve(oldPhotoKey);
     },
   };
 }

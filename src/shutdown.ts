@@ -27,7 +27,11 @@ export interface ShutdownOptions {
  *   when the server fails to stop). Later calls do nothing, so a second Ctrl+C is harmless.
  */
 export function createShutdown(options: ShutdownOptions): (signal: string) => Promise<void> {
-  const log = options.log ?? ((message: string) => console.log(message));
+  const log =
+    options.log ??
+    ((message: string) => {
+      console.log(message);
+    });
   let isStopping = false;
 
   return async (signal) => {

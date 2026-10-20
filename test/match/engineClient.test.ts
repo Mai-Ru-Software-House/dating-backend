@@ -74,7 +74,10 @@ describe("recommend", () => {
 
     await client.recommend(RECOMMEND);
 
-    const call = calls[0]!;
+    const call = calls[0];
+    if (call === undefined) {
+      throw new Error("The engine was not called.");
+    }
     expect(call.url.href).toBe("http://match-engine.test:8000/internal/v1/recommendations");
     expect(call.method).toBe("POST");
     expect(call.headers.get("content-type")).toBe("application/json");
@@ -145,7 +148,10 @@ describe("search", () => {
 
     await client.search(SEARCH);
 
-    const call = calls[0]!;
+    const call = calls[0];
+    if (call === undefined) {
+      throw new Error("The engine was not called.");
+    }
     expect(call.url.pathname).toBe("/internal/v1/candidates/search");
     expect(call.body).toEqual({
       ageMin: 25,
@@ -188,7 +194,7 @@ describe("failures", () => {
   });
 
   it("turns a timeout into MATCH_ENGINE_UNAVAILABLE", async () => {
-    const { client } = clientFor(() => new Promise<Response>(() => {}), 20);
+    const { client } = clientFor(() => new Promise<Response>(() => undefined), 20);
     expectUnavailable(await catchError(client.recommend(RECOMMEND)));
   });
 

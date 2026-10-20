@@ -10,19 +10,15 @@ import { createShutdown } from "../src/shutdown";
 function setup(options: { failServer?: boolean; failDatabase?: boolean } = {}) {
   const events: string[] = [];
   const shutdown = createShutdown({
-    stopServer: async () => {
+    stopServer: () => {
       events.push("server stopped");
-      if (options.failServer) {
-        throw new Error("stop failed");
-      }
+      return options.failServer ? Promise.reject(new Error("stop failed")) : Promise.resolve();
     },
-    closeDatabase: async () => {
+    closeDatabase: () => {
       events.push("database closed");
-      if (options.failDatabase) {
-        throw new Error("close failed");
-      }
+      return options.failDatabase ? Promise.reject(new Error("close failed")) : Promise.resolve();
     },
-    exit: (code) => events.push(`exit ${code}`),
+    exit: (code) => events.push(`exit ${String(code)}`),
     log: (message) => events.push(`log: ${message}`),
   });
   return { shutdown, events };
@@ -43,7 +39,7 @@ describe("createShutdown", () => {
   it("still closes the database when the server fails to stop, and exits with 1", async () => {
     const { shutdown, events } = setup({ failServer: true });
     const originalError = console.error;
-    console.error = () => {};
+    console.error = () => undefined;
     try {
       await shutdown("SIGINT");
     } finally {
@@ -56,7 +52,7 @@ describe("createShutdown", () => {
   it("exits with 1 when the database fails to close", async () => {
     const { shutdown, events } = setup({ failDatabase: true });
     const originalError = console.error;
-    console.error = () => {};
+    console.error = () => undefined;
     try {
       await shutdown("SIGTERM");
     } finally {

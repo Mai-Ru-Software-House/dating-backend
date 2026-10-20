@@ -37,7 +37,7 @@ describe("createNominatimClient", () => {
     const address = await client.reverseGeocode(13.7244, 100.7296);
 
     expect(address).toEqual(BANGKOK_ANSWER.address);
-    const url = calls[0]!.url;
+    const url = calls[0]?.url ?? new URL(BASE_URL);
     expect(url.origin + url.pathname).toBe("http://nominatim.test/reverse");
     expect(url.searchParams.get("lat")).toBe("13.7244");
     expect(url.searchParams.get("lon")).toBe("100.7296");
@@ -58,7 +58,7 @@ describe("createNominatimClient", () => {
 
     await client.reverseGeocode(13.7244, 100.7296);
 
-    expect(calls[0]!.url.searchParams.get("email")).toBe("backend@example.org");
+    expect(calls[0]?.url.searchParams.get("email")).toBe("backend@example.org");
   });
 
   it("sends a User-Agent that is not empty", async () => {
@@ -67,7 +67,7 @@ describe("createNominatimClient", () => {
 
     await client.reverseGeocode(13.7, 100.5);
 
-    const userAgent = calls[0]!.headers.get("user-agent");
+    const userAgent = calls[0]?.headers.get("user-agent");
     expect(userAgent).toBeTruthy();
     expect(userAgent).toContain("MaiRu");
   });
@@ -78,8 +78,8 @@ describe("createNominatimClient", () => {
     await createNominatimClient({ baseUrl: `${BASE_URL}/`, fetch }).reverseGeocode(1, 2);
     await createNominatimClient({ baseUrl: `${BASE_URL}/geo/`, fetch }).reverseGeocode(1, 2);
 
-    expect(calls[0]!.url.pathname).toBe("/reverse");
-    expect(calls[1]!.url.pathname).toBe("/geo/reverse");
+    expect(calls[0]?.url.pathname).toBe("/reverse");
+    expect(calls[1]?.url.pathname).toBe("/geo/reverse");
   });
 
   it("returns null when Nominatim finds no place", async () => {

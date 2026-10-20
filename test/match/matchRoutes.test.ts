@@ -16,10 +16,18 @@ const HTTP_UNAUTHORIZED = 401;
 const HTTP_INTERNAL_ERROR = 500;
 
 const TOKENS: Record<string, string> = { "alice-token": ALICE.userId, "joe-token": JOE.userId };
-const fakeValidator: SessionValidator = async (token) => {
+const fakeValidator: SessionValidator = (token) => {
   const userId = TOKENS[token];
-  return userId === undefined ? null : { userId };
+  return Promise.resolve(userId === undefined ? null : { userId });
 };
+
+/** The JSON fields these tests read. Each route answers only some of them. */
+interface ResponseBody {
+  hasMore: boolean;
+  recommendations: { username: string }[];
+  candidates: { username: string }[];
+  error: { code: string; message: string; field: string };
+}
 
 function setup() {
   const { service, engine } = createTestMatchService();
@@ -31,7 +39,7 @@ function setup() {
       headers.authorization = `Bearer ${token}`;
     }
     const response = await app.handle(new Request(`http://localhost${path}`, { headers }));
-    return { status: response.status, body: await response.json() };
+    return { status: response.status, body: (await response.json()) as ResponseBody };
   }
   return { get, engine };
 }
@@ -47,11 +55,8 @@ describe("GET /api/v1/recommendations", () => {
     const { status, body } = await get("/api/v1/recommendations", "alice-token");
     expect(status).toBe(HTTP_OK);
     expect(body.hasMore).toBe(false);
-    expect(body.recommendations.map((card: { username: string }) => card.username)).toEqual([
-      "bob",
-      "chai",
-    ]);
-    expect(Object.keys(body.recommendations[0]).sort()).toEqual([
+    expect(body.recommendations.map((card) => card.username)).toEqual(["bob", "chai"]);
+    expect(Object.keys(body.recommendations[0] ?? {}).sort()).toEqual([
       "age",
       "displayName",
       "distanceKm",
@@ -79,7 +84,7 @@ describe("GET /api/v1/recommendations", () => {
     const { get } = setup();
     const { status, body } = await get("/api/v1/recommendations", "joe-token");
     expect(status).toBe(HTTP_OK);
-    expect(body).toEqual({ recommendations: [], hasMore: false });
+    expect(body as unknown).toEqual({ recommendations: [], hasMore: false });
   });
 
   it("passes limit and offset on, and answers 400 with the field when they are bad", async () => {
@@ -87,7 +92,7 @@ describe("GET /api/v1/recommendations", () => {
     expect((await get("/api/v1/recommendations?limit=1&offset=0", "alice-token")).status).toBe(
       HTTP_OK,
     );
-    expect(engine.calls[0]!.body.limit).toBe(2);
+    expect(engine.calls[0]?.body.limit).toBe(2);
 
     const tooBig = await get("/api/v1/recommendations?limit=51", "alice-token");
     expect(tooBig.status).toBe(HTTP_BAD_REQUEST);
@@ -103,7 +108,7 @@ describe("GET /api/v1/recommendations", () => {
     engine.state.isDown = true;
     const { status, body } = await get("/api/v1/recommendations", "alice-token");
     expect(status).toBe(HTTP_INTERNAL_ERROR);
-    expect(body).toEqual({
+    expect(body as unknown).toEqual({
       error: {
         code: "MATCH_ENGINE_UNAVAILABLE",
         message: "The match service is not available right now. Please try again.",
@@ -122,10 +127,7 @@ describe("GET /api/v1/candidates", () => {
     const { get } = setup();
     const { status, body } = await get("/api/v1/candidates", "alice-token");
     expect(status).toBe(HTTP_OK);
-    expect(body.candidates.map((card: { username: string }) => card.username)).toEqual([
-      "bob",
-      "chai",
-    ]);
+    expect(body.candidates.map((card) => card.username)).toEqual(["bob", "chai"]);
     expect(body.candidates[0]).not.toHaveProperty("matchScore");
   });
 
@@ -135,7 +137,7 @@ describe("GET /api/v1/candidates", () => {
       "/api/v1/candidates?minAge=25&maxAge=26&targetGenders=male&maxDistanceKm=20",
       "alice-token",
     );
-    expect(body.candidates.map((card: { username: string }) => card.username)).toEqual(["chai"]);
+    expect(body.candidates.map((card) => card.username)).toEqual(["chai"]);
   });
 
   it("reads a repeated targetGenders parameter as a list", async () => {
@@ -145,7 +147,7 @@ describe("GET /api/v1/candidates", () => {
       "alice-token",
     );
     expect(status).toBe(HTTP_OK);
-    expect(engine.calls[0]!.body.gender).toEqual(["male", "non_binary"]);
+    expect(engine.calls[0]?.body.gender).toEqual(["male", "non_binary"]);
   });
 
   it("FM13: min age above max age answers 400 with the age range in the message", async () => {

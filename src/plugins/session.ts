@@ -13,7 +13,7 @@ const HTTP_UNAUTHORIZED = 401;
 const BEARER_PREFIX = "Bearer ";
 
 function readToken(authorization: string | undefined): string | null {
-  if (authorization === undefined || !authorization.startsWith(BEARER_PREFIX)) {
+  if (!authorization?.startsWith(BEARER_PREFIX)) {
     return null;
   }
   const token = authorization.slice(BEARER_PREFIX.length).trim();

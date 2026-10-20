@@ -74,22 +74,22 @@ export function createInMemoryProfileRepository(
       return hash === undefined || hash === "" ? null : hash;
     },
 
-    async listGenderCodes() {
-      return [...genderCodes];
+    listGenderCodes() {
+      return Promise.resolve([...genderCodes]);
     },
 
-    async isUsernameTaken(username) {
-      return isTaken("username", username);
+    isUsernameTaken(username) {
+      return Promise.resolve(isTaken("username", username));
     },
 
     // The check and the insert run without an `await` between them, so two calls at the same
     // time cannot both pass the check.
-    async createProfile(newProfile: NewProfile): Promise<CreateProfileResult> {
+    createProfile(newProfile: NewProfile): Promise<CreateProfileResult> {
       if (isTaken("username", newProfile.username)) {
-        return { status: "usernameTaken" };
+        return Promise.resolve({ status: "usernameTaken" });
       }
       if (isTaken("photoKey", newProfile.photoKey)) {
-        return { status: "photoKeyTaken" };
+        return Promise.resolve({ status: "photoKeyTaken" });
       }
       const { photoKey, passwordHash, ...fields } = newProfile;
       const profile: StoredProfile = copyProfile({
@@ -98,18 +98,18 @@ export function createInMemoryProfileRepository(
         photoId: photoIdFromKey(photoKey),
       });
       users.set(profile.userId, { profile, photoKey, passwordHash });
-      return { status: "created", profile: copyProfile(profile) };
+      return Promise.resolve({ status: "created", profile: copyProfile(profile) });
     },
 
-    async findProfileById(userId) {
+    findProfileById(userId) {
       const user = users.get(userId);
-      return user === undefined ? null : copyProfile(user.profile);
+      return Promise.resolve(user === undefined ? null : copyProfile(user.profile));
     },
 
-    async updateProfile(userId, changes: ProfileChanges) {
+    updateProfile(userId, changes: ProfileChanges) {
       const user = users.get(userId);
       if (user === undefined) {
-        return null;
+        return Promise.resolve(null);
       }
       // Like Prisma, a field that is missing or undefined keeps its value.
       const updated: StoredProfile = {
@@ -125,7 +125,7 @@ export function createInMemoryProfileRepository(
         updated.placeName = changes.location.placeName;
       }
       user.profile = copyProfile(updated);
-      return copyProfile(user.profile);
+      return Promise.resolve(copyProfile(user.profile));
     },
   };
 }

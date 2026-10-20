@@ -19,7 +19,7 @@ const USERNAME_RULE = "The username must be 4 to 20 characters: letters, digits 
 export const MIN_PASSWORD_LENGTH = 8;
 const LETTER_PATTERN = /\p{L}/u;
 const DIGIT_PATTERN = /[0-9]/;
-const PASSWORD_RULE = `at least ${MIN_PASSWORD_LENGTH} characters, with at least one letter and one digit`;
+const PASSWORD_RULE = `at least ${String(MIN_PASSWORD_LENGTH)} characters, with at least one letter and one digit`;
 
 /** The `users.display_name` column holds 50 characters. */
 export const MAX_DISPLAY_NAME_LENGTH = 50;
@@ -47,7 +47,7 @@ function invalid(field: string, message: string): ApiError {
 
 /** Count Unicode characters, as PostgreSQL counts them for varchar. */
 function characterCount(value: string): number {
-  return [...value].length;
+  return Array.from(value).length;
 }
 
 /**
@@ -77,7 +77,10 @@ export function checkPassword(value: string): void {
     throw invalid("password", `The password is too short. Use ${PASSWORD_RULE}.`);
   }
   if (length > MAX_PASSWORD_LENGTH) {
-    throw invalid("password", `The password can have at most ${MAX_PASSWORD_LENGTH} characters.`);
+    throw invalid(
+      "password",
+      `The password can have at most ${String(MAX_PASSWORD_LENGTH)} characters.`,
+    );
   }
   if (!LETTER_PATTERN.test(value) || !DIGIT_PATTERN.test(value)) {
     throw invalid("password", `The password needs ${PASSWORD_RULE}.`);
@@ -98,7 +101,7 @@ export function checkDisplayName(value: string): string {
   if (characterCount(trimmed) > MAX_DISPLAY_NAME_LENGTH) {
     throw invalid(
       "displayName",
-      `The display name can have at most ${MAX_DISPLAY_NAME_LENGTH} characters.`,
+      `The display name can have at most ${String(MAX_DISPLAY_NAME_LENGTH)} characters.`,
     );
   }
   return trimmed;
@@ -129,7 +132,7 @@ export function checkDateOfBirth(value: string, now: Date): Date {
     throw invalid("dateOfBirth", "The date of birth cannot be in the future.");
   }
   if (ageOn(date, now) < MIN_AGE) {
-    throw invalid("dateOfBirth", `You must be at least ${MIN_AGE} years old.`);
+    throw invalid("dateOfBirth", `You must be at least ${String(MIN_AGE)} years old.`);
   }
   return date;
 }
@@ -158,12 +161,15 @@ export function checkGender(value: string, genderCodes: string[], field = "gende
 export function checkLocation(location: LocationInput): LocationInput {
   // Written so that NaN and Infinity also fail.
   if (!(location.lat >= MIN_LATITUDE && location.lat <= MAX_LATITUDE)) {
-    throw invalid("location.lat", `lat must be a number from ${MIN_LATITUDE} to ${MAX_LATITUDE}.`);
+    throw invalid(
+      "location.lat",
+      `lat must be a number from ${String(MIN_LATITUDE)} to ${String(MAX_LATITUDE)}.`,
+    );
   }
   if (!(location.lon >= MIN_LONGITUDE && location.lon <= MAX_LONGITUDE)) {
     throw invalid(
       "location.lon",
-      `lon must be a number from ${MIN_LONGITUDE} to ${MAX_LONGITUDE}.`,
+      `lon must be a number from ${String(MIN_LONGITUDE)} to ${String(MAX_LONGITUDE)}.`,
     );
   }
   return { lat: location.lat, lon: location.lon };
@@ -173,7 +179,7 @@ function checkWholeNumber(field: string, value: number, min: number, max: number
   if (!(Number.isInteger(value) && value >= min && value <= max)) {
     throw invalid(
       field,
-      `${field.split(".").at(-1)} must be a whole number from ${min} to ${max}.`,
+      `${field.split(".").at(-1) ?? field} must be a whole number from ${String(min)} to ${String(max)}.`,
     );
   }
   return value;
