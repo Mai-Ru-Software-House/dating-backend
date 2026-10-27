@@ -11,3 +11,7 @@ dist
 pictures
 *.md
 CLAUDE.local.md
+quality_assessment
+.prettierrc*
+.prettierignore
+eslint.config.*

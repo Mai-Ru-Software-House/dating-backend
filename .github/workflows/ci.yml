@@ -5,6 +5,8 @@ on:
     branches:
       - main
       - "feat/**"
+    tags:
+      - "v*.*.*"
   pull_request:
     branches:
       - main
@@ -65,7 +67,8 @@ jobs:
   build-and-push:
     name: Build and push image
     needs: test
-    # Pull requests only run the checks above. Images are built from main and feature branches.
+    # Pull requests only run the checks above. Images are built from main, feature branches and
+    # release tags (vX.Y.Z).
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     permissions:
@@ -74,6 +77,38 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # The image version comes from the git tag, so it must match the version in package.json
+      - name: Check the release tag
+        if: github.ref_type == 'tag'
+        run: |
+          if ! [[ "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Release tags look like v1.0.0, got $GITHUB_REF_NAME"
+            exit 1
+          fi
+          package_version=$(jq -r .version package.json)
+          if [ "${GITHUB_REF_NAME#v}" != "$package_version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $package_version"
+            exit 1
+          fi
+
+      # Every image gets an immutable tag with the commit hash. Only main moves the `dev` tag,
+      # and only a release tag adds the version (v1.0.0 becomes 1.0.0)
+      - name: Work out the image tags
+        id: tags
+        run: |
+          image="$REGISTRY/$IMAGE_NAME"
+          {
+            echo "list<<EOF"
+            echo "$image:$GITHUB_SHA"
+            if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+              echo "$image:dev"
+            fi
+            if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+              echo "$image:${GITHUB_REF_NAME#v}"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -85,14 +120,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Every image gets an immutable tag with the commit hash. Only main moves the `dev` tag.
       - name: Build and push image
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-            ${{ github.ref == 'refs/heads/main' && format('{0}/{1}:dev', env.REGISTRY, env.IMAGE_NAME) || '' }}
+          tags: ${{ steps.tags.outputs.list }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

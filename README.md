@@ -63,6 +63,19 @@ The database has two migrations. The second one replaces the gender `other` with
 | [docs/requirements.md](docs/requirements.md), [docs/use-cases/](docs/use-cases/) | Requirements and use cases from the course brief          |
 | [docs/test-plans/](docs/test-plans/)                                             | The functional test plan and the Messaging unit test plan |
 
+## Releases
+
+The workflow `.github/workflows/ci.yml` runs the checks and tests, then pushes the image to `ghcr.io/mai-ru-software-house/dating-backend`:
+
+| Trigger                    | Image tags pushed          |
+| -------------------------- | -------------------------- |
+| Push to `main`             | commit SHA, `dev`          |
+| Push of a git tag `vX.Y.Z` | commit SHA, `X.Y.Z`        |
+| Push to `feat/**`          | commit SHA                 |
+| Pull request               | none (only the checks run) |
+
+To cut a release, set `version` in `package.json` (and `API_VERSION` in `src/plugins/openapi.ts`) to `X.Y.Z`, merge it to `main`, then tag that commit and push the tag: `git tag vX.Y.Z && git push origin vX.Y.Z`. The tag build fails if the tag and the `package.json` version differ. Production (`dating-infra`) uses the `X.Y.Z` tag, never `dev`.
+
 ## Team
 
 Tae (Match Engine, infrastructure, photos), Tee (app), Vic (backend), Chuan (backend and database). Each service has an owner, see [docs/team.md](docs/team.md). Every pull request is reviewed by one other member.
