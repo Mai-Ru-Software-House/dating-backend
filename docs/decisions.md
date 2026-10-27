@@ -24,7 +24,8 @@ What the team has decided about the backend, and what is still open. Check this 
 | Favorites and notes | A favorite is private and safe to add twice. Favorites come first in the chat list. Notes are private to their author; the paths `/users/{userId}/notes` are aliases of `/notes` (used by the test plan) | Vic (8 Oct) |
 | Note edit and delete | `PATCH` and `DELETE /notes/{noteId}` are built, because the app has the edit and delete screens. Only the author can use them. A note that does not exist, is not yours, or has a bad ID is one answer, `404 NOTE_NOT_FOUND`. A note has `updatedAt`, `null` until it is edited. The text limit stays 500 characters (the app and test plan A7; the database column allows 2000) | Vic (9 Oct) |
 | Database | Chuan's schema (PR #3). IDs made by the database with `uuidv7()`. The database has no CHECK rules, so the services check every rule. The generated Prisma client is committed in `src/generated` | Chuan |
-| Images | The backend image is tagged with the commit hash. Only `main` moves `:dev`. The container applies migrations when it starts (to be agreed with Chuan and Tae, see Open) | Vic (8 Oct) |
+| Images | The backend image is tagged with the commit hash. Only `main` moves `:dev`. A git tag `vX.Y.Z` also pushes the image tag `X.Y.Z`, and the workflow fails if the tag differs from the version in `package.json`. The container applies migrations when it starts (to be agreed with Chuan and Tae, see Open) | Vic (8 Oct, release tags 27 Oct) |
+| Versioning | The first release is 1.0.0. The version is set in `package.json` and `API_VERSION` in `src/plugins/openapi.ts`, and both change together | Vic (27 Oct) |
 | Server | The server refuses a request body over 6 MiB (413, before any route), stops cleanly on `SIGTERM` and `SIGINT` (finishes requests, closes the database, exits 0), and CORS allows only the origins in `CORS_ORIGINS` | Vic (9 Oct) |
 | CORS off | An empty `CORS_ORIGINS` (unset or empty) disables CORS: the CORS plugin is not registered at all, so no CORS headers are sent and the preflight OPTIONS is not answered by it | Tae (15 Oct) |
 | File storage | Tae sets up RustFS: the access keys and the upload clean up. The bucket is created by the backend at start up when it is missing (a few tries with waiting, so RustFS can still be starting; then it gives up and photo requests fail until the next start up). The backend only needs `RUSTFS_ENDPOINT`, `RUSTFS_ACCESS_KEY`, `RUSTFS_SECRET_KEY` and `RUSTFS_BUCKET` | Tae (15 Oct) |
@@ -40,7 +41,7 @@ What the team has decided about the backend, and what is still open. Check this 
 
 | Question | Owner | Proposal |
 | --- | --- | --- |
-| Migrations: automatic when the container starts, or by hand only | Chuan, Tae | Automatic on start in dev; by hand in production |
+| Migrations: automatic when the container starts, or by hand only | Chuan, Tae | Automatic on start in dev and in production for 1.0.0, because the infra upgrade script and the upgrade test (DT07) rely on it. The container does this today. Waiting for Chuan and Tae to agree |
 
 | Nginx: `client_max_body_size` (default 1 MB refuses a sign up with a 5 MB photo), HTTPS in production | Tae | `client_max_body_size 6m;` in both files. Branch `feat/api-env-and-body-limit` in `dating-infra` has it, with the backend environment variables, for Tae to review |
 | Engine docs and CI: its `BACKEND_REQUIREMENTS.md` has an empty list in section 3 and mentions Swipes, Blocks and bios; its CI moves `:dev` from `feat/**` branches | Tae | Only recorded in `docs/match-engine.md`, "Answers from the engine". No action needed from us |

@@ -59,10 +59,10 @@ Nothing. The backend pushes the candidates in each request (`docs/match-engine.m
 
 ## The backend image
 
-- Image name `ghcr.io/mai-ru-software-house/dating-backend`. Infra picks the tag with `BACKEND_IMAGE` (dev uses `:dev`).
-- This repo has a `Dockerfile` and a GitHub Actions workflow. Every push to `main` and `feat/**` builds an image tagged with the commit hash. Only `main` moves `:dev`, so Watchtower never follows a feature branch.
+- Image name `ghcr.io/mai-ru-software-house/dating-backend`. Infra picks the tag with `BACKEND_IMAGE` (dev uses `:dev`, a release uses the version, for example `:1.0.0`).
+- This repo has a `Dockerfile` and a GitHub Actions workflow. Every push to `main` and `feat/**` builds an image tagged with the commit hash. Only `main` moves `:dev`, so Watchtower never follows a feature branch. A git tag such as `v1.0.0` also pushes the image tag `1.0.0` (the workflow checks the tag against `package.json`). See [release-notes-1.0.0.md](release-notes-1.0.0.md).
 - The server stops cleanly when Docker sends `SIGTERM` (it finishes the requests in progress and closes the database). It refuses a request body over 6 MiB.
-- On start the container runs `bun run db:deploy` (applies pending migrations), then the server. The database now has two migrations (the second replaced the gender `other` with `prefer_not_to_say` and made `users.photo_key` unique). The schema owner (Chuan) and Tae should agree whether migrations run automatically like this, or only by hand.
+- On start the container runs `bun run db:deploy` (applies pending migrations), then the server. The database now has two migrations (the second replaced the gender `other` with `prefer_not_to_say` and made `users.photo_key` unique). The proposal for 1.0.0 is to keep this automatic in production too, because the infra upgrade script relies on it. The schema owner (Chuan) and Tae still need to agree.
 - The generated Prisma client is committed in `src/generated`, so the build runs no `prisma generate`.
 
 ## Nginx

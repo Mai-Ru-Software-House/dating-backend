@@ -5,7 +5,7 @@
 import { openapi } from "@elysia/openapi";
 
 const API_TITLE = "Mai Ru API";
-const API_VERSION = "0.1.0";
+const API_VERSION = "1.0.0";
 const API_DESCRIPTION =
   "REST API for the Mai Ru online dating system. The written contract is docs/api-contract.md.";
 
